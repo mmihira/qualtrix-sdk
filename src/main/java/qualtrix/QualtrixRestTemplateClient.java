@@ -1,20 +1,34 @@
 package qualtrix;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
-import qualtrix.responses.V3.*;
+import org.springframework.web.reactive.function.client.WebClient;
+import qualtrix.responses.V3.ResponseExport.CreateResponseExportInput;
+import qualtrix.responses.V3.ResponseExport.CreateResponseExportResponse;
+import qualtrix.responses.V3.ResponseExportProgress.ResponseExportProgressResponse;
+import qualtrix.responses.V3.Survey.AbstractSurveyResult;
+import qualtrix.responses.V3.Survey.DefaultSurveyResponse;
+import qualtrix.responses.V3.Survey.SurveyResponse;
+import qualtrix.responses.V3.SurveyList.SurveyListResponse;
+import qualtrix.responses.V3.WhoAmI.WhoAmIResponse;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.function.Consumer;
 
 @RequiredArgsConstructor
+@AllArgsConstructor
 @Data
 public class QualtrixClient {
     @NonNull private final RestTemplate restClient;
     @NonNull private final String accessToken;
+    private final WebClient webClient;
     private String qualtrixApiBaseURL = "https://au1.qualtrics.com/";
 
     private String buildRequestUrl(String endpoint) {
@@ -36,7 +50,7 @@ public class QualtrixClient {
         return headers;
     }
 
-    private <T> ResponseEntity<T> getReqeust(String path, Class<T> t) {
+    private <T> ResponseEntity<T> getRequest(String path, Class<T> t) {
         String url = this.buildRequestUrl(path);
         HttpEntity entity = new HttpEntity(this.genericGetHeaders());
         return this.restClient.exchange(url, HttpMethod.GET, entity, t);
@@ -49,7 +63,24 @@ public class QualtrixClient {
      * @throws InterruptedException
      */
     public ResponseEntity<WhoAmIResponse> whoAmI() throws IOException, InterruptedException {
-        return this.getReqeust(EndPoints.V3.WhoAmI.path(), WhoAmIResponse.class);
+        return this.getRequest(EndPoints.V3.WhoAmI.path(), WhoAmIResponse.class);
+    }
+
+    /**
+     *
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    public Flux<WhoAmIResponse> whoAmIWeb() throws IOException, InterruptedException {
+        var headers = this.genericGetHeaders();
+        return this.webClient
+                .get()
+                .uri(this.buildRequestUrl(EndPoints.V3.WhoAmI.path()))
+                .header("X-API-TOKEN", this.accessToken)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .bodyToFlux(WhoAmIResponse.class);
     }
 
     /**
@@ -59,7 +90,7 @@ public class QualtrixClient {
      * @throws InterruptedException
      */
     public ResponseEntity<SurveyListResponse> listSurveys() throws IOException, InterruptedException {
-        return this.getReqeust(EndPoints.V3.ListSurveys.path(), SurveyListResponse.class);
+        return this.getRequest(EndPoints.V3.ListSurveys.path(), SurveyListResponse.class);
     }
 
     /**
@@ -71,7 +102,7 @@ public class QualtrixClient {
      * @throws InterruptedException
      */
     public ResponseEntity<DefaultSurveyResponse> survey(String surveyId) throws IOException, InterruptedException {
-        return this.getReqeust(EndPoints.V3.GetSurvey.forSurvey(surveyId), DefaultSurveyResponse.class);
+        return this.getRequest(EndPoints.V3.GetSurvey.forSurvey(surveyId), DefaultSurveyResponse.class);
     }
 
     /**
@@ -87,7 +118,13 @@ public class QualtrixClient {
     public <T extends AbstractSurveyResult, U extends SurveyResponse<T>> ResponseEntity<U>
          survey(String surveyId, Class<U> tClass) throws IOException, InterruptedException {
 
-        return this.getReqeust(EndPoints.V3.GetSurvey.forSurvey(surveyId), tClass);
+        return this.getRequest(EndPoints.V3.GetSurvey.forSurvey(surveyId), tClass);
+    }
+
+    public ResponseEntity<ResponseExportProgressResponse> responseExportProgress(String surveyId, String exportProgressId)
+            throws IOException, InterruptedException {
+
+        return this.getRequest(EndPoints.V3.ResponseExportProgress.path(surveyId, exportProgressId), ResponseExportProgressResponse.class);
     }
 
     /**

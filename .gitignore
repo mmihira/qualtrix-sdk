@@ -15,3 +15,5 @@ bin
 
 .idea
 gradle
+
+src/test/resources/qualtrix-key.json
