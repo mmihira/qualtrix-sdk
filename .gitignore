@@ -17,3 +17,4 @@ bin
 gradle
 
 src/test/resources/qualtrix-key.json
+qualtrix-key.json

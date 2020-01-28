@@ -1,7 +1,8 @@
 
-package qualtrix.responses.V3;
+package qualtrix.responses.V3.Survey;
 
 import lombok.*;
+import qualtrix.responses.V3.BaseResponse;
 
 @Data
 @ToString(callSuper = true)

@@ -30,11 +30,13 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-core:2.9.8'
     implementation 'com.fasterxml.jackson.core:jackson-annotations:2.9.8'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.8'
+    implementation 'org.springframework:spring-webflux:5.2.3.RELEASE'
 
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'
     
     compile group: 'org.springframework', name: 'spring-web', version: '5.2.3.RELEASE'
+    compile "io.projectreactor.netty:reactor-netty:0.9.4.RELEASE" 
 }
 
 tasks.withType(Test) {

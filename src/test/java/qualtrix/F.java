@@ -2,7 +2,7 @@ package qualtrix;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
-import qualtrix.responses.V3.AbstractSurveyResult;
+import qualtrix.responses.V3.Survey.AbstractSurveyResult;
 
 import java.util.HashMap;
 import java.util.Map;

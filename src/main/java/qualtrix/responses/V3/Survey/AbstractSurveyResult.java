@@ -1,4 +1,4 @@
-package qualtrix.responses.V3;
+package qualtrix.responses.V3.Survey;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

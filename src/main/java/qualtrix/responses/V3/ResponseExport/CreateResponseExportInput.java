@@ -1,5 +1,5 @@
 
-package qualtrix.responses.V3;
+package qualtrix.responses.V3.ResponseExport;
 
 import java.util.List;
 
@@ -8,13 +8,15 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.*;
 
 @Data
-@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 @AllArgsConstructor
-@RequiredArgsConstructor
-@JsonPropertyOrder({ "format", "embeddedDataIds" })
-public class CreateResponseExportInput {
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private List<String> embeddedDataIds;
-    @NonNull
-    private ResponseExportFormat format;
+public class CreateResponseExportInput extends AbstractCreateResponseExportInput {
+    public CreateResponseExportInput(List<String> embeddedDataIds, @NonNull ResponseExportFormat format) {
+        super(embeddedDataIds, format);
+    }
+
+    public CreateResponseExportInput(@NonNull ResponseExportFormat format) {
+        super(format);
+    }
 }

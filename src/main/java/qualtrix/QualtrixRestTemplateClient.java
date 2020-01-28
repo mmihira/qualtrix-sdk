@@ -1,53 +1,40 @@
 package qualtrix;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.*;
 import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
+import qualtrix.responses.V3.ResponseExport.AbstractCreateResponseExportInput;
 import qualtrix.responses.V3.ResponseExport.CreateResponseExportInput;
 import qualtrix.responses.V3.ResponseExport.CreateResponseExportResponse;
+import qualtrix.responses.V3.ResponseExportFile.AbstractResponseExportFileEntity;
+import qualtrix.responses.V3.ResponseExportFile.AbstractResponseExportFileResponse;
+import qualtrix.responses.V3.ResponseExportFile.DefaultResponseExportFileResponse;
 import qualtrix.responses.V3.ResponseExportProgress.ResponseExportProgressResponse;
 import qualtrix.responses.V3.Survey.AbstractSurveyResult;
 import qualtrix.responses.V3.Survey.DefaultSurveyResponse;
 import qualtrix.responses.V3.Survey.SurveyResponse;
 import qualtrix.responses.V3.SurveyList.SurveyListResponse;
 import qualtrix.responses.V3.WhoAmI.WhoAmIResponse;
-import reactor.core.publisher.Flux;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.function.Consumer;
+import java.io.*;
+import java.util.zip.ZipInputStream;
 
-@RequiredArgsConstructor
-@AllArgsConstructor
-@Data
-public class QualtrixClient {
-    @NonNull private final RestTemplate restClient;
-    @NonNull private final String accessToken;
-    private final WebClient webClient;
-    private String qualtrixApiBaseURL = "https://au1.qualtrics.com/";
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
+public class QualtrixRestTemplateClient extends QualtrixClientBase {
+    @NonNull
+    private final RestTemplate restClient;
 
-    private String buildRequestUrl(String endpoint) {
-        return String.format("%s/%s", this.qualtrixApiBaseURL, endpoint);
-    }
+    @Builder
+    public QualtrixRestTemplateClient(@NonNull String accessToken,
+                                      @NonNull RestTemplate restClient) {
 
-    private HttpHeaders genericGetHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-TOKEN", this.accessToken);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-        return headers;
-    }
-
-    private HttpHeaders genericPostHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-TOKEN", this.accessToken);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return headers;
+        super(accessToken);
+        this.restClient = restClient;
     }
 
     private <T> ResponseEntity<T> getRequest(String path, Class<T> t) {
@@ -56,69 +43,30 @@ public class QualtrixClient {
         return this.restClient.exchange(url, HttpMethod.GET, entity, t);
     }
 
-    /**
-     *
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     */
     public ResponseEntity<WhoAmIResponse> whoAmI() throws IOException, InterruptedException {
         return this.getRequest(EndPoints.V3.WhoAmI.path(), WhoAmIResponse.class);
     }
 
-    /**
-     *
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    public Flux<WhoAmIResponse> whoAmIWeb() throws IOException, InterruptedException {
-        var headers = this.genericGetHeaders();
-        return this.webClient
-                .get()
-                .uri(this.buildRequestUrl(EndPoints.V3.WhoAmI.path()))
-                .header("X-API-TOKEN", this.accessToken)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToFlux(WhoAmIResponse.class);
-    }
-
-    /**
-     *
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     */
     public ResponseEntity<SurveyListResponse> listSurveys() throws IOException, InterruptedException {
         return this.getRequest(EndPoints.V3.ListSurveys.path(), SurveyListResponse.class);
     }
 
-    /**
-     * getSurvey and deserealise the response ignoring much of the question data.
-     * Use {@link #survey(String, Class)} and extend if you want to specify custom data.
-     * @param surveyId
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     */
     public ResponseEntity<DefaultSurveyResponse> survey(String surveyId) throws IOException, InterruptedException {
-        return this.getRequest(EndPoints.V3.GetSurvey.forSurvey(surveyId), DefaultSurveyResponse.class);
+        return survey(surveyId, DefaultSurveyResponse.class);
     }
 
-    /**
-     *
-     * @param surveyId
-     * @param tClass
-     * @param <T>
-     * @param <U>
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     */
     public <T extends AbstractSurveyResult, U extends SurveyResponse<T>> ResponseEntity<U>
-         survey(String surveyId, Class<U> tClass) throws IOException, InterruptedException {
+    survey(String surveyId, Class<U> tClass) throws IOException, InterruptedException {
 
         return this.getRequest(EndPoints.V3.GetSurvey.forSurvey(surveyId), tClass);
+    }
+
+    public <T extends AbstractCreateResponseExportInput> ResponseEntity<CreateResponseExportResponse> createResponseExport(
+            String surveyId, T body) throws IOException, InterruptedException {
+
+        String url = this.buildRequestUrl(EndPoints.V3.CreateResponseExport.forSurvey(surveyId));
+        HttpEntity<T> entity = new HttpEntity<>(body, this.genericPostHeaders());
+        return this.restClient.exchange(url, HttpMethod.POST, entity, CreateResponseExportResponse.class);
     }
 
     public ResponseEntity<ResponseExportProgressResponse> responseExportProgress(String surveyId, String exportProgressId)
@@ -127,18 +75,59 @@ public class QualtrixClient {
         return this.getRequest(EndPoints.V3.ResponseExportProgress.path(surveyId, exportProgressId), ResponseExportProgressResponse.class);
     }
 
-    /**
-     *
-     * @param surveyId
-     * @param params
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    public ResponseEntity<CreateResponseExportResponse> createResponseExport(String surveyId, CreateResponseExportInput params) throws IOException, InterruptedException {
-        String url = this.buildRequestUrl(EndPoints.V3.CreateResponseExport.forSurvey(surveyId));
-        HttpEntity entity = new HttpEntity(params, this.genericPostHeaders());
-        return this.restClient.exchange(url, HttpMethod.POST, entity, CreateResponseExportResponse.class);
+    public <T> ResponseEntity<T> createResponseExportFile(
+            String surveyId, String fileId, ResponseExtractor<ResponseEntity<T>> f) throws IOException {
+
+        String url = this.buildRequestUrl(EndPoints.V3.ResponseExportFile.path(surveyId, fileId));
+        return this.restClient.execute(url, HttpMethod.GET,
+                nn -> nn.getHeaders().putAll(this.genericGetHeaders()), f);
     }
+
+    public ResponseEntity<ClientHttpResponse> createResponseExportFileHttpResponse(
+            String surveyId, String fileId) throws IOException {
+
+        return createResponseExportFile(surveyId, fileId, clientHttpResponse ->
+                new ResponseEntity<>(clientHttpResponse, clientHttpResponse.getHeaders(), clientHttpResponse.getStatusCode()));
+    }
+
+    public <T extends AbstractResponseExportFileEntity, U extends AbstractResponseExportFileResponse<T>>
+    ResponseEntity<U> createResponseExportFileObject(String surveyId, String fileId, Class<U> uClass) throws IOException {
+
+        return createResponseExportFile(surveyId, fileId, clientHttpResponse -> {
+            try (ZipInputStream zipInputStream = new ZipInputStream(clientHttpResponse.getBody())) {
+                zipInputStream.getNextEntry();
+                ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                U ret = objectMapper.readValue(zipInputStream, uClass);
+                return new ResponseEntity<>(ret, clientHttpResponse.getHeaders(), clientHttpResponse.getStatusCode());
+            }
+        });
+    }
+
+    public ResponseEntity<DefaultResponseExportFileResponse> createResponseExportFileObject(
+            String surveyId, String fileId) throws IOException {
+        return createResponseExportFileObject(surveyId, fileId, DefaultResponseExportFileResponse.class);
+    }
+
+
+    public <T extends AbstractResponseExportFileEntity, U extends AbstractResponseExportFileResponse<T>, G extends CreateResponseExportInput>
+    ResponseEntity<U> createResponseExportAndGetFile(String surveyId, G input, Class<U> uClass) throws IOException, InterruptedException {
+        // TODO: Add a timeout to this function
+        var export = this.createResponseExport(surveyId, input);
+        boolean complete = false;
+        while (!complete) {
+            var progress = this.responseExportProgress(surveyId, export.getBody().getResult().getProgressId());
+            complete = progress.getBody().getResult().isComplete();
+            if (complete) {
+                return this.createResponseExportFileObject(surveyId, progress.getBody().getResult().getFileId(), uClass);
+            }
+        }
+        return null;
+    }
+
+    ResponseEntity<DefaultResponseExportFileResponse> createResponseExportAndGetFileDefault(String surveyId, CreateResponseExportInput input) throws IOException, InterruptedException {
+        return this.createResponseExportAndGetFile(surveyId, input, DefaultResponseExportFileResponse.class);
+    }
+
 }
 

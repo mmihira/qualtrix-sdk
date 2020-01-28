@@ -1,5 +1,5 @@
 
-package qualtrix.responses.V3;
+package qualtrix.responses.V3.SurveyList;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

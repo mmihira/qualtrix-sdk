@@ -1,5 +1,5 @@
 
-package qualtrix.responses.V3.ResponseExport;
+package qualtrix.responses.V3.ResponseExportProgress;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,8 +9,12 @@ import lombok.RequiredArgsConstructor;
 @Data
 @RequiredArgsConstructor
 @NoArgsConstructor
-public class CreateResponseExportResult {
+public class ResponseExportProgressResult {
     private long percentComplete;
-    @NonNull private String progressId;
     @NonNull private String status;
+    private String fileId;
+
+    public boolean isComplete() {
+        return this.status.equals("complete");
+    }
 }

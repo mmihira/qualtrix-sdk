@@ -22,5 +22,15 @@ class EndPoints {
                 return String.format("%s/%s/%s", "API/v3/surveys/", surveyId, "export-responses");
             }
         }
+        static class ResponseExportProgress{
+            static String path(String surveyId, String exportProgressId) {
+                return String.format("%s/%s/%s/%s", "API/v3/surveys/", surveyId, "export-responses", exportProgressId);
+            }
+        }
+        static class ResponseExportFile{
+            static String path(String surveyId, String fileId) {
+                return String.format("%s/%s/%s/%s/%s", "API/v3/surveys/", surveyId, "export-responses", fileId, "file");
+            }
+        }
     }
 }

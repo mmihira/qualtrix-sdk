@@ -1,4 +1,4 @@
-package qualtrix.responses.V3;
+package qualtrix.responses.V3.ResponseExport;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public enum ResponseExportFormat {
-    csv("csv"),
     json("json");
 
     @Getter

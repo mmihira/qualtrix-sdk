@@ -3,28 +3,26 @@ package qualtrix.responses.V3;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import qualtrix.responses.V3.ResponseExport.CreateResponseExportInput;
+import qualtrix.responses.V3.ResponseExport.ResponseExportFormat;
 
 import java.util.Arrays;
-import java.util.List;
-
 import static org.junit.Assert.*;
-import static qualtrix.responses.V3.ResponseExportFormat.csv;
 
 public class CreateResponseExportInputTest {
     @Test
     public void testJsonDeSerialisationWithOnlyFormat() throws JsonProcessingException {
-        var sub = new CreateResponseExportInput(ResponseExportFormat.csv);
+        var sub = new CreateResponseExportInput(ResponseExportFormat.json);
         ObjectMapper objectMapper = new ObjectMapper();
         var jsonOut = objectMapper.writeValueAsString(sub);
-        assertEquals(jsonOut, "{\"format\":\"csv\"}");
+        assertEquals(jsonOut, "{\"format\":\"json\"}");
     }
 
     @Test
     public void testJsonDeSerialisation() throws JsonProcessingException {
-        var sub = new CreateResponseExportInput(Arrays.asList("test"), ResponseExportFormat.csv);
+        var sub = new CreateResponseExportInput(Arrays.asList("test"), ResponseExportFormat.json);
         ObjectMapper objectMapper = new ObjectMapper();
         var jsonOut = objectMapper.writeValueAsString(sub);
-        assertEquals(jsonOut, "{\"format\":\"csv\",\"embeddedDataIds\":[\"test\"]}");
+        assertEquals(jsonOut, "{\"format\":\"json\",\"embeddedDataIds\":[\"test\"]}");
     }
 }

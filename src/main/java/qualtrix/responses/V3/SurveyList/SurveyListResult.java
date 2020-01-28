@@ -1,5 +1,5 @@
 
-package qualtrix.responses.V3;
+package qualtrix.responses.V3.SurveyList;
 
 import java.util.List;
 import lombok.Data;

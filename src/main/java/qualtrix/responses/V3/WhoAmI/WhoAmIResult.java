@@ -1,4 +1,4 @@
-package qualtrix.responses.V3;
+package qualtrix.responses.V3.WhoAmI;
 
 import lombok.*;
 import java.io.Serializable;

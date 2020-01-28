@@ -1,5 +1,5 @@
 
-package qualtrix.responses.V3.ResponseExport;
+package qualtrix.responses.V3.ResponseExportProgress;
 
 import lombok.*;
 import qualtrix.responses.V3.BaseResponse;
@@ -9,7 +9,7 @@ import qualtrix.responses.V3.BaseResponse;
 @EqualsAndHashCode(callSuper = true)
 @RequiredArgsConstructor
 @NoArgsConstructor
-public class CreateResponseExportResponse extends BaseResponse {
+public class ResponseExportProgressResponse extends BaseResponse {
     @NonNull
-    private CreateResponseExportResult result;
+    private ResponseExportProgressResult result;
 }
