@@ -7,6 +7,8 @@ import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestTemplate;
+import qualtrix.responses.V3.MailingList.CreateMailingListInput;
+import qualtrix.responses.V3.MailingList.CreateMailingListResponse;
 import qualtrix.responses.V3.ResponseExport.AbstractCreateResponseExportInput;
 import qualtrix.responses.V3.ResponseExport.CreateResponseExportInput;
 import qualtrix.responses.V3.ResponseExport.CreateResponseExportResponse;
@@ -129,5 +131,7 @@ public class QualtrixRestTemplateClient extends QualtrixClientBase {
         return this.createResponseExportAndGetFile(surveyId, input, DefaultResponseExportFileResponse.class);
     }
 
+//    ResponseEntity<CreateMailingListResponse> createMailingLIst(CreateMailingListInput input) {
+//    }
 }
 

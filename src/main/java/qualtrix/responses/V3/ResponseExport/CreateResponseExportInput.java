@@ -3,8 +3,6 @@ package qualtrix.responses.V3.ResponseExport;
 
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.*;
 
 @Data
