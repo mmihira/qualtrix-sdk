@@ -9,13 +9,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @NoArgsConstructor
 public abstract class AbstractSurveyResult {
-    @NonNull  private String creationDate;
-    @NonNull  private SurveyResultExpiration expiration;
-    @NonNull  private String id;
-    @NonNull  private Boolean isActive;
-    @NonNull  private String lastModifiedDate;
-    @NonNull  private String name;
-    @NonNull  private String organizationId;
-    @NonNull  private String ownerId;
-    @NonNull  private SurveyResultResponseCounts responseCounts;
+  @NonNull private String creationDate;
+  @NonNull private SurveyResultExpiration expiration;
+  @NonNull private String id;
+  @NonNull private Boolean isActive;
+  @NonNull private String lastModifiedDate;
+  @NonNull private String name;
+  @NonNull private String organizationId;
+  @NonNull private String ownerId;
+  @NonNull private SurveyResultResponseCounts responseCounts;
 }

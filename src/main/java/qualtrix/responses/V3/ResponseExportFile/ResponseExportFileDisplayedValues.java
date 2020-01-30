@@ -5,5 +5,4 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class ResponseExportFileDisplayedValues {
-}
+public class ResponseExportFileDisplayedValues {}

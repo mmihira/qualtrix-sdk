@@ -34,18 +34,19 @@ dependencies {
 
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'
-    
+
     compile group: 'org.springframework', name: 'spring-web', version: '5.2.3.RELEASE'
-    compile "io.projectreactor.netty:reactor-netty:0.9.4.RELEASE" 
+    compile "io.projectreactor.netty:reactor-netty:0.9.4.RELEASE"
 }
+
 
 tasks.withType(Test) {
     testLogging {
         // set options for log level LIFECYCLE
         events TestLogEvent.FAILED,
-               TestLogEvent.PASSED,
-               TestLogEvent.SKIPPED,
-               TestLogEvent.STANDARD_OUT
+                TestLogEvent.PASSED,
+                TestLogEvent.SKIPPED,
+                TestLogEvent.STANDARD_OUT
         exceptionFormat TestExceptionFormat.FULL
         showExceptions true
         showCauses true
@@ -54,11 +55,11 @@ tasks.withType(Test) {
         // set options for log level DEBUG and INFO
         debug {
             events TestLogEvent.STARTED,
-                   TestLogEvent.FAILED,
-                   TestLogEvent.PASSED,
-                   TestLogEvent.SKIPPED,
-                   TestLogEvent.STANDARD_ERROR,
-                   TestLogEvent.STANDARD_OUT
+                    TestLogEvent.FAILED,
+                    TestLogEvent.PASSED,
+                    TestLogEvent.SKIPPED,
+                    TestLogEvent.STANDARD_ERROR,
+                    TestLogEvent.STANDARD_OUT
             exceptionFormat TestExceptionFormat.FULL
         }
         info.events = debug.events

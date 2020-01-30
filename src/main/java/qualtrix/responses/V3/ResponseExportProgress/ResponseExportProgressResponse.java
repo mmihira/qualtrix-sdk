@@ -1,4 +1,3 @@
-
 package qualtrix.responses.V3.ResponseExportProgress;
 
 import lombok.*;
@@ -10,6 +9,5 @@ import qualtrix.responses.V3.BaseResponse;
 @RequiredArgsConstructor
 @NoArgsConstructor
 public class ResponseExportProgressResponse extends BaseResponse {
-    @NonNull
-    private ResponseExportProgressResult result;
+  @NonNull private ResponseExportProgressResult result;
 }

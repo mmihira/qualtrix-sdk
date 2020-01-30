@@ -1,4 +1,3 @@
-
 package qualtrix.responses.V3.SurveyList;
 
 import lombok.*;
@@ -10,6 +9,5 @@ import qualtrix.responses.V3.BaseResponse;
 @RequiredArgsConstructor
 @NoArgsConstructor
 public class SurveyListResponse extends BaseResponse {
-    @NonNull
-    private SurveyListResult result;
+  @NonNull private SurveyListResult result;
 }

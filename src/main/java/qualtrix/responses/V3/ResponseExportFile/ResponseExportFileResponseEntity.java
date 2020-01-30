@@ -8,7 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ResponseExportFileResponseEntity extends AbstractResponseExportFileEntity {
-    private ResponseExportFileValues values;
-    private ResponseExportFileLabels labels;
-    private ResponseExportFileDisplayedValues displayedValues;
+  private ResponseExportFileValues values;
+  private ResponseExportFileLabels labels;
+  private ResponseExportFileDisplayedValues displayedValues;
 }

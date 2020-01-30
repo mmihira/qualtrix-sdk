@@ -1,4 +1,3 @@
-
 package qualtrix.responses.V3.ResponseExport;
 
 import lombok.*;
@@ -10,6 +9,5 @@ import qualtrix.responses.V3.BaseResponse;
 @RequiredArgsConstructor
 @NoArgsConstructor
 public class CreateResponseExportResponse extends BaseResponse {
-    @NonNull
-    private CreateResponseExportResult result;
+  @NonNull private CreateResponseExportResult result;
 }

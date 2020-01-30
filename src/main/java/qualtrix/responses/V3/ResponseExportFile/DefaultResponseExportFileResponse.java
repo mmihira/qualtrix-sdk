@@ -5,6 +5,5 @@ import lombok.Getter;
 
 @Getter
 @EqualsAndHashCode(callSuper = true)
-public class DefaultResponseExportFileResponse extends AbstractResponseExportFileResponse<ResponseExportFileResponseEntity> {
-
-}
+public class DefaultResponseExportFileResponse
+    extends AbstractResponseExportFileResponse<ResponseExportFileResponseEntity> {}

@@ -13,8 +13,6 @@ import java.util.Map;
 @ToString(onlyExplicitlyIncluded = true, callSuper = true)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class F extends AbstractSurveyResult {
-    @JsonProperty("questions")
-    private Map<String, Object> questions = new HashMap<String, Object>();
+  @JsonProperty("questions")
+  private Map<String, Object> questions = new HashMap<String, Object>();
 }
-
-

@@ -1,4 +1,3 @@
-
 package qualtrix.responses.V3.ResponseExport;
 
 import lombok.Data;
@@ -10,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @NoArgsConstructor
 public class CreateResponseExportResult {
-    private long percentComplete;
-    @NonNull private String progressId;
-    @NonNull private String status;
+  private long percentComplete;
+  @NonNull private String progressId;
+  @NonNull private String status;
 }
