@@ -31,14 +31,22 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-annotations:2.9.8'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.8'
     implementation 'org.springframework:spring-webflux:5.2.3.RELEASE'
-
-    // Use JUnit test framework
-    testImplementation 'junit:junit:4.12'
+    
+    testImplementation("junit:junit:4.13")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.6.0") 
 
     compile group: 'org.springframework', name: 'spring-web', version: '5.2.3.RELEASE'
     compile "io.projectreactor.netty:reactor-netty:0.9.4.RELEASE"
 }
 
+test {
+    useJUnitPlatform()
+    systemProperty 'junit.jupiter.conditions.deactivate', '*'
+    systemProperties = [
+            'junit.jupiter.extensions.autodetection.enabled': 'true',
+            'junit.jupiter.testinstance.lifecycle.default': 'per_class'
+    ] 
+}
 
 tasks.withType(Test) {
     testLogging {
