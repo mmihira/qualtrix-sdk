@@ -11,6 +11,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestTemplate;
+import qualtrix.exceptions.ExportTimedout;
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.CreateContact.CreateContactResponse;
 import qualtrix.responses.V3.DeleteContact.DeleteContactResponse;
@@ -33,6 +34,8 @@ import qualtrix.responses.V3.SurveyList.SurveyListResponse;
 import qualtrix.responses.V3.WhoAmI.WhoAmIResponse;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.zip.ZipInputStream;
 
 @ToString(callSuper = true)
@@ -127,53 +130,65 @@ public class QualtrixRestTemplateClient extends QualtrixClientBase {
         surveyId, fileId, DefaultResponseExportFileResponse.class);
   }
 
+  /**
+   * Request export of survey responses and also retrieve it. Waiting for an export timeouts after the specified
+   * time.
+   */
   public <
           T extends AbstractResponseExportFileEntity,
           U extends AbstractResponseExportFileResponse<T>,
           G extends AbstractCreateResponseExportBody>
-      ResponseEntity<U> createResponseExportAndGetFile(String surveyId, G body, Class<U> uClass)
-          throws IOException, InterruptedException {
+      ResponseEntity<U> createResponseExportAndGetFile(
+          String surveyId, G body, Duration timeout, Class<U> uClass)
+          throws IOException, InterruptedException, ExportTimedout {
 
-    // TODO: Add a timeout to this function
+    var start = Instant.now();
     var export = this.createResponseExport(surveyId, body);
-    boolean complete = false;
-    while (!complete) {
+
+    while (true) {
       var progress =
           this.responseExportProgress(surveyId, export.getBody().getResult().getProgressId());
-      complete = progress.getBody().getResult().isComplete();
-      if (complete) {
+      if (progress.getBody().getResult().isComplete()) {
         return this.createResponseExportFileObject(
             surveyId, progress.getBody().getResult().getFileId(), uClass);
       }
+      var elapsed = Duration.between(start, Instant.now());
+      if (elapsed.compareTo(timeout) > 0) {
+        throw new ExportTimedout(
+            String.format("Exporting results timedout after %d seconds", elapsed.toSeconds()));
+      }
     }
-    return null;
   }
 
   public <G extends AbstractCreateResponseExportBody, T>
       ResponseEntity<T> createResponseExportAndGetFile(
-          String surveyId, G body, ResponseExtractor<ResponseEntity<T>> extractor)
-          throws IOException, InterruptedException {
+          String surveyId, Duration timeout, G body, ResponseExtractor<ResponseEntity<T>> extractor)
+          throws IOException, InterruptedException, ExportTimedout {
 
     var export = this.createResponseExport(surveyId, body);
-    boolean complete = false;
-    while (!complete) {
+    var start = Instant.now();
+
+    while (true) {
       var progress =
           this.responseExportProgress(surveyId, export.getBody().getResult().getProgressId());
-      complete = progress.getBody().getResult().isComplete();
-      if (complete) {
+      if (progress.getBody().getResult().isComplete()) {
         var fileId = progress.getBody().getResult().getFileId();
         return createResponseExportFile(surveyId, fileId, extractor);
       }
+      var elapsed = Duration.between(start, Instant.now());
+      if (elapsed.compareTo(timeout) > 0) {
+        throw new ExportTimedout(
+                String.format("Exporting results timedout after %d seconds", elapsed.toSeconds()));
+      }
     }
-    return null;
   }
 
   public <G extends AbstractCreateResponseExportBody>
       ResponseEntity<DefaultResponseExportFileResponse> createResponseExportAndGetFileDefault(
-          String surveyId, G body) throws IOException, InterruptedException {
+          String surveyId, Duration timeout, G body) throws IOException, InterruptedException, ExportTimedout {
 
     return this.createResponseExportAndGetFile(
-        surveyId, body, DefaultResponseExportFileResponse.class);
+        surveyId, body, timeout, DefaultResponseExportFileResponse.class);
   }
 
   public ResponseEntity<CreateMailingListResponse> createMailingList(CreateMailingListBody body) {

@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestTemplate;
+import qualtrix.exceptions.ExportTimedout;
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody;
 import qualtrix.responses.V3.MailingList.CreateMailingListBody;
@@ -18,15 +19,18 @@ import qualtrix.responses.V3.ResponseExport.ResponseExportFormat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.zip.ZipInputStream;
+
+import static org.junit.Assert.assertThrows;
 
 public class QualtrixRestTemplateClientTest {
 
   @FunctionalInterface
   private interface ClientRun {
-    void Run(QualtrixRestTemplateClient r) throws IOException, InterruptedException;
+    void Run(QualtrixRestTemplateClient r) throws IOException, InterruptedException, ExportTimedout;
   }
 
   private class ByteArrayClientResponseExtractor {
@@ -157,9 +161,29 @@ public class QualtrixRestTemplateClientTest {
         c -> {
           var ret =
               c.createResponseExportAndGetFileDefault(
-                  surveyId, new CreateResponseExportBody(ResponseExportFormat.json));
+                  surveyId,
+                  Duration.ofSeconds(10),
+                  new CreateResponseExportBody(ResponseExportFormat.json));
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
         });
+  }
+
+  @Test
+  public void createResponseExportAndGetFileDefaultThrowsTimedout() throws IOException {
+    var surveyId = TestProperties.properties().getSurveyId();
+    var restTemplate = new RestTemplate();
+    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
+    Exception exception =
+        assertThrows(
+            ExportTimedout.class,
+            () -> {
+              var ret =
+                  client.createResponseExportAndGetFileDefault(
+                      surveyId,
+                      Duration.ofMillis(1),
+                      new CreateResponseExportBody(ResponseExportFormat.json));
+              Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+            });
   }
 
   /** Example of reading the export file to a raw byte stream */
@@ -175,9 +199,33 @@ public class QualtrixRestTemplateClientTest {
               new CreateResponseExportBodyFilterQuestions(ResponseExportFormat.json, List.of());
           ResponseEntity<ByteArrayOutputStream> ret =
               c.createResponseExportAndGetFile(
-                  surveyId, exportBody, new ByteArrayClientResponseExtractor().invoke());
+                  surveyId,
+                  Duration.ofSeconds(10),
+                  exportBody,
+                  new ByteArrayClientResponseExtractor().invoke());
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
         });
+  }
+
+  @Test
+  public void createResponseExportAndGetFileTimedOut() throws IOException {
+    var surveyId = TestProperties.properties().getSurveyId();
+    var restTemplate = new RestTemplate();
+    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
+    Exception exception =
+        assertThrows(
+            ExportTimedout.class,
+            () -> {
+              var exportBody =
+                  new CreateResponseExportBodyFilterQuestions(ResponseExportFormat.json, List.of());
+              ResponseEntity<ByteArrayOutputStream> ret =
+                  client.createResponseExportAndGetFile(
+                      surveyId,
+                      Duration.ofMillis(1),
+                      exportBody,
+                      new ByteArrayClientResponseExtractor().invoke());
+              Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+            });
   }
 
   @Test
