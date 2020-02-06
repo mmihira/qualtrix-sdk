@@ -69,12 +69,15 @@ public class QualtrixRestTemplateClientTest {
     }
   }
 
+  private QualtrixRestTemplateClient newClient() throws IOException {
+    var restTemplate = new RestTemplate();
+    return new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
+  }
+
   @Test
   public void whoAmI() throws IOException {
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var result = c.whoAmI();
           Assert.assertEquals(result.getStatusCode(), HttpStatus.OK);
@@ -84,10 +87,8 @@ public class QualtrixRestTemplateClientTest {
 
   @Test
   public void listSurveys() throws IOException {
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var ret = c.listSurveys();
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
@@ -97,10 +98,8 @@ public class QualtrixRestTemplateClientTest {
 
   @Test
   public void survey1() throws IOException {
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var ret = c.survey("SV_1MLZsPfqxmInXyB");
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
@@ -111,10 +110,8 @@ public class QualtrixRestTemplateClientTest {
   @Test
   public void survey2() throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var ret = c.survey(surveyId, G.class);
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
@@ -125,10 +122,8 @@ public class QualtrixRestTemplateClientTest {
   @Test
   public void createResponseExport() throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var ret =
               c.createResponseExport(
@@ -141,10 +136,8 @@ public class QualtrixRestTemplateClientTest {
   public void createResponseExportFileObject1() throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
     var fileId = TestProperties.properties().getExportFileId();
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var ret = c.createResponseExportFileObject(surveyId, fileId);
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
@@ -154,10 +147,8 @@ public class QualtrixRestTemplateClientTest {
   @Test
   public void createResponseExportAndGetFileDefault() throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var ret =
               c.createResponseExportAndGetFileDefault(
@@ -171,8 +162,7 @@ public class QualtrixRestTemplateClientTest {
   @Test
   public void createResponseExportAndGetFileDefaultThrowsTimedout() throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
+    var client = newClient();
     Exception exception =
         assertThrows(
             ExportTimedout.class,
@@ -190,10 +180,8 @@ public class QualtrixRestTemplateClientTest {
   @Test
   public void createResponseExportAndGetFile() throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var exportBody =
               new CreateResponseExportBodyFilterQuestions(ResponseExportFormat.json, List.of());
@@ -210,8 +198,7 @@ public class QualtrixRestTemplateClientTest {
   @Test
   public void createResponseExportAndGetFileTimedOut() throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
+    var client = newClient();
     Exception exception =
         assertThrows(
             ExportTimedout.class,
@@ -230,13 +217,11 @@ public class QualtrixRestTemplateClientTest {
 
   @Test
   public void createMailingList() throws IOException {
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     var libraryId = TestProperties.properties().getLibraryId();
     var newCategory = "Something";
     var name = "New Mailing List";
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var input = new CreateMailingListBody(newCategory, libraryId, name);
           var ret = c.createMailingList(input);
@@ -247,12 +232,10 @@ public class QualtrixRestTemplateClientTest {
 
   @Test
   public void listMailingList() throws IOException {
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
-          var ret = client.listMailingList();
+          var ret = c.listMailingList();
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
@@ -260,21 +243,19 @@ public class QualtrixRestTemplateClientTest {
 
   @Test
   public void deleteContact() throws IOException {
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           // First create a new contact
           var body =
               new CreateContactBody("test@gmal.com", null, null, "bob", "eng", "getRequest", true);
-          var ret = client.createContact(TestProperties.properties().getMailingListId(), body);
+          var ret = c.createContact(TestProperties.properties().getMailingListId(), body);
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
           var contactId = ret.getBody().getResult().getId();
 
           // Now try and delete the contact
-          var del = client.deleteContact(TestProperties.properties().getMailingListId(), contactId);
+          var del = c.deleteContact(TestProperties.properties().getMailingListId(), contactId);
           Assert.assertEquals(del.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(del.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
@@ -282,10 +263,8 @@ public class QualtrixRestTemplateClientTest {
 
   @Test
   public void generateDistributionLinks() throws IOException {
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var body =
               new GenerateDistributionLinksBody(
@@ -293,7 +272,7 @@ public class QualtrixRestTemplateClientTest {
                   "Test link generation",
                   new Date(),
                   TestProperties.properties().getMailingListId());
-          var ret = client.generateDistributionLinks(body);
+          var ret = c.generateDistributionLinks(body);
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
@@ -301,13 +280,11 @@ public class QualtrixRestTemplateClientTest {
 
   @Test
   public void retrieveGeneratedLinks() throws IOException {
-    var restTemplate = new RestTemplate();
-    var client = new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
     runCatchExceptions(
-        client,
+        newClient(),
         c -> {
           var ret =
-              client.retrieveGeneratedLinks(
+              c.retrieveGeneratedLinks(
                   TestProperties.properties().getDistributionLinksId(),
                   TestProperties.properties().getSurveyId());
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);

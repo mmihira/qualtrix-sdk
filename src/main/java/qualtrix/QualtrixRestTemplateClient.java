@@ -131,8 +131,8 @@ public class QualtrixRestTemplateClient extends QualtrixClientBase {
   }
 
   /**
-   * Request export of survey responses and also retrieve it. Waiting for an export timeouts after the specified
-   * time.
+   * Request export of survey responses and also retrieve it. Waiting for an export timeouts after
+   * the specified time.
    */
   public <
           T extends AbstractResponseExportFileEntity,
@@ -178,14 +178,15 @@ public class QualtrixRestTemplateClient extends QualtrixClientBase {
       var elapsed = Duration.between(start, Instant.now());
       if (elapsed.compareTo(timeout) > 0) {
         throw new ExportTimedout(
-                String.format("Exporting results timedout after %d seconds", elapsed.toSeconds()));
+            String.format("Exporting results timedout after %d seconds", elapsed.toSeconds()));
       }
     }
   }
 
   public <G extends AbstractCreateResponseExportBody>
       ResponseEntity<DefaultResponseExportFileResponse> createResponseExportAndGetFileDefault(
-          String surveyId, Duration timeout, G body) throws IOException, InterruptedException, ExportTimedout {
+          String surveyId, Duration timeout, G body)
+          throws IOException, InterruptedException, ExportTimedout {
 
     return this.createResponseExportAndGetFile(
         surveyId, body, timeout, DefaultResponseExportFileResponse.class);

@@ -15,10 +15,11 @@ plugins {
     id "io.freefair.lombok" version "4.1.6"
 }
 
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
 repositories {
-    // Use jcenter for resolving dependencies.
-    // You can declare any Maven/Ivy/file repository here.
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {
@@ -37,6 +38,7 @@ dependencies {
 
     compile group: 'org.springframework', name: 'spring-web', version: '5.2.3.RELEASE'
     compile "io.projectreactor.netty:reactor-netty:0.9.4.RELEASE"
+    compile group: 'io.projectreactor.addons', name: 'reactor-extra', version: '3.3.2.RELEASE'
 }
 
 test {
@@ -82,4 +84,20 @@ tasks.withType(Test) {
             }
         }
     }
+}
+
+task sourceJar(type: Jar) {
+    classifier "sources"
+    from sourceSets.main.allJava
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier "javadoc"
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives jar
+    archives sourceJar
+    archives javadocJar
 }

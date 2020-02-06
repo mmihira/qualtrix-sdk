@@ -16,27 +16,28 @@ class EndPoints {
 
     static class GetSurvey {
       static String forSurvey(String surveyId) {
-        return String.format("%s/%s", "API/v3/surveys/", surveyId);
+        return String.format("%s/%s", "API/v3/surveys", surveyId);
       }
     }
 
     static class CreateResponseExport {
+
       static String forSurvey(String surveyId) {
-        return String.format("%s/%s/%s", "API/v3/surveys/", surveyId, "export-responses");
+        return String.format("%s/%s/%s", "API/v3/surveys", surveyId, "export-responses");
       }
     }
 
     static class ResponseExportProgress {
       static String path(String surveyId, String exportProgressId) {
         return String.format(
-            "%s/%s/%s/%s", "API/v3/surveys/", surveyId, "export-responses", exportProgressId);
+            "%s/%s/%s/%s", "API/v3/surveys", surveyId, "export-responses", exportProgressId);
       }
     }
 
     static class ResponseExportFile {
       static String path(String surveyId, String fileId) {
         return String.format(
-            "%s/%s/%s/%s/%s", "API/v3/surveys/", surveyId, "export-responses", fileId, "file");
+            "%s/%s/%s/%s/%s", "API/v3/surveys", surveyId, "export-responses", fileId, "file");
       }
     }
 
@@ -75,6 +76,11 @@ class EndPoints {
       static String path(String distributionId) {
         return String.format(
             "%s/%s/%s?surveyId={surveyId}", "API/v3/distributions", distributionId, "links");
+      }
+
+      static String path(String distributionId, String surveyId) {
+        return String.format(
+            "%s/%s/%s?surveyId=%s", "API/v3/distributions", distributionId, "links", surveyId);
       }
     }
   }
