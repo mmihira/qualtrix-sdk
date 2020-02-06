@@ -1,11 +1,28 @@
 # qualtrix-sdk
 
 `Qualtrix-sdk` is the qualtrix sdk in the java programming language. Currently only a subset of the API endpoints have been
-implemented.
+implemented. This library is designed to be used with spring-rest-templates or spring-webclient.
 
 ## Getting Started
 
-You can't use this yet.. it's still in development.
+### Install using maven
+### Install using gradle
+
+### Usage
+
+#### Rest Template
+```java
+    var restTemplate = new RestTemplate();
+    var client = QualtrixRestTemplateClient("QUALTRIX_API_KEY", restTemplate);
+    client.whoAmI();
+```
+
+#### Webclient
+```java
+    var webClient = WebClient.create();
+    var client = QualtrixWebFluxClient("QUALTRIX_API_KEY", webClient);
+    client.whoAmI().block();
+```
 
 ## License
 

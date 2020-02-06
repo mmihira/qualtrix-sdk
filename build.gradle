@@ -32,9 +32,9 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-annotations:2.9.8'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.8'
     implementation 'org.springframework:spring-webflux:5.2.3.RELEASE'
-    
+
     testImplementation("junit:junit:4.13")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.6.0") 
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.6.0")
 
     compile group: 'org.springframework', name: 'spring-web', version: '5.2.3.RELEASE'
     compile "io.projectreactor.netty:reactor-netty:0.9.4.RELEASE"
@@ -46,8 +46,8 @@ test {
     systemProperty 'junit.jupiter.conditions.deactivate', '*'
     systemProperties = [
             'junit.jupiter.extensions.autodetection.enabled': 'true',
-            'junit.jupiter.testinstance.lifecycle.default': 'per_class'
-    ] 
+            'junit.jupiter.testinstance.lifecycle.default'  : 'per_class'
+    ]
 }
 
 tasks.withType(Test) {
@@ -96,8 +96,126 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     from javadoc.destinationDir
 }
 
+signing {
+    sign configurations.archives
+}
+
 artifacts {
     archives jar
     archives sourceJar
     archives javadocJar
 }
+
+def customizePom(pom) {
+    pom.withXml {
+        def root = asNode()
+
+        // eliminate test-scoped dependencies (no need in maven central POMs)
+        root.dependencies.removeAll { dep ->
+            dep.scope == "test"
+        }
+
+        // add all items necessary for maven central publication
+        root.children().last() + {
+            resolveStrategy = Closure.DELEGATE_FIRST
+
+            description 'Qualtrix SDK'
+            name 'Qualtrix SDK'
+            url 'https://github.com/mmihira/qualtrix-sdk'
+            organization {
+                name 'com.github.mmihira'
+                url 'https://github.com/mmihira'
+            }
+            issueManagement {
+                system 'GitHub'
+                url 'https://github.com/mmihira/qualtrix-sdk/issues'
+            }
+            licenses {
+                license {
+                    name 'Apache License 2.0'
+                    url 'https://github.com/mmihira/qualtrix-sdk/blob/master/LICENSE'
+                    distribution 'repo'
+                }
+            }
+            scm {
+                url 'https://github.com/mmihira/qualtrix-sdk'
+                connection 'scm:git:git://github.com/mmihira/qualtrix-sdk.git'
+                developerConnection 'scm:git:ssh://git@github.com:mmihira/qualtrix-sdk.git'
+            }
+            developers {
+                developer {
+                    name 'mmihira'
+                }
+            }
+        }
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            customizePom(pom)
+            groupId 'io.github.mmihira'
+            artifactId 'qualtrix-sdk'
+            version '0.1.0'
+
+            from components.java
+
+            // create the sign pom artifact
+            pom.withXml {
+                def pomFile = file("${project.buildDir}/generated-pom.xml")
+                writeTo(pomFile)
+                def pomAscFile = signing.sign(pomFile).signatureFiles[0]
+                artifact(pomAscFile) {
+                    classifier = null
+                    extension = 'pom.asc'
+                }
+            }
+
+            artifact(sourceJar) {
+                classifier = 'sources'
+            }
+            artifact(javadocJar) {
+                classifier = 'javadoc'
+            }
+
+
+            // create the signed artifacts
+            project.tasks.signArchives.signatureFiles.each {
+                artifact(it) {
+                    def matcher = it.file =~ /-(sources|javadoc)\.jar\.asc$/
+                    if (matcher.find()) {
+                        classifier = matcher.group(1)
+                    } else {
+                        classifier = null
+                    }
+                    extension = 'jar.asc'
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            credentials {
+                username sonatypeUsername
+                password sonatypePassword
+            }
+        }
+    }
+}
+
+model {
+    tasks.generatePomFileForMavenJavaPublication {
+        destination = file("$buildDir/generated-pom.xml")
+    }
+    tasks.publishMavenJavaPublicationToMavenLocal {
+        dependsOn project.tasks.signArchives
+    }
+    tasks.publishMavenJavaPublicationToMavenRepository {
+        dependsOn project.tasks.signArchives
+    }
+}
+
+
