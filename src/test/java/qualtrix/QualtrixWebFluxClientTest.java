@@ -225,6 +225,7 @@ public class QualtrixWebFluxClientTest {
                     var input = new CreateMailingListBody(newCategory, libraryId, name);
                     var ret = c.createMailingList(input).block();
                     Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+                    Assert.assertNotNull(ret.getBody().getResult().getId());
                     Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
                 });
     }

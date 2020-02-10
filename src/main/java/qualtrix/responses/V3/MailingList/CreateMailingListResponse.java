@@ -7,7 +7,7 @@ import qualtrix.responses.V3.ResponseExport.CreateResponseExportResult;
 @Data
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-@RequiredArgsConstructor
+@AllArgsConstructor
 @NoArgsConstructor
 public class CreateMailingListResponse extends BaseResponse {
   @NonNull private CreateMailingListResponseResult result;
