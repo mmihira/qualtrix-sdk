@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.zip.ZipInputStream;
 
 import static org.junit.Assert.assertThrows;
@@ -72,6 +73,19 @@ public class QualtrixRestTemplateClientTest {
   private QualtrixRestTemplateClient newClient() throws IOException {
     var restTemplate = new RestTemplate();
     return new QualtrixRestTemplateClient(TestProperties.getQualtrixTestKey(), restTemplate);
+  }
+
+  private String createMailingListHelper(QualtrixRestTemplateClient c) throws IOException {
+    var libraryId = TestProperties.properties().getLibraryId();
+    var newCategory = "Qualtrix-SDK-Test";
+    var name = UUID.randomUUID().toString();
+    // First create  a mailing list
+    var input = new CreateMailingListBody(newCategory, libraryId, name);
+    var mailRet = c.createMailingList(input);
+    Assert.assertEquals(mailRet.getStatusCode(), HttpStatus.OK);
+    Assert.assertNotNull(mailRet.getBody().getResult().getId());
+    Assert.assertEquals(mailRet.getBody().getMeta().getHttpStatus(), "200 - OK");
+    return mailRet.getBody().getResult().getId();
   }
 
   @Test
@@ -218,15 +232,20 @@ public class QualtrixRestTemplateClientTest {
   @Test
   public void createMailingList() throws IOException {
     var libraryId = TestProperties.properties().getLibraryId();
-    var newCategory = "Something";
-    var name = "New Mailing List";
+    var newCategory = "Qualtrix-SDK-Test";
+    var name = UUID.randomUUID().toString();
     runCatchExceptions(
         newClient(),
         c -> {
           var input = new CreateMailingListBody(newCategory, libraryId, name);
           var ret = c.createMailingList(input);
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+          Assert.assertNotNull(ret.getBody().getResult().getId());
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          var delret = c.deleteMailingList(ret.getBody().getResult().getId());
+          Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
   }
 
@@ -246,18 +265,25 @@ public class QualtrixRestTemplateClientTest {
     runCatchExceptions(
         newClient(),
         c -> {
+          var mailListId = createMailingListHelper(c);
+
           // First create a new contact
           var body =
               new CreateContactBody("test@gmal.com", null, null, "bob", "eng", "getRequest", true);
-          var ret = c.createContact(TestProperties.properties().getMailingListId(), body);
+          var ret = c.createContact(mailListId, body);
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
           var contactId = ret.getBody().getResult().getId();
 
           // Now try and delete the contact
-          var del = c.deleteContact(TestProperties.properties().getMailingListId(), contactId);
+          var del = c.deleteContact(mailListId, contactId);
           Assert.assertEquals(del.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(del.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          // Delete the mailing list
+          var delret = c.deleteMailingList(mailListId);
+          Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
   }
 
@@ -266,12 +292,14 @@ public class QualtrixRestTemplateClientTest {
     runCatchExceptions(
         newClient(),
         c -> {
+          var mailListId = createMailingListHelper(c);
           var body =
               new GenerateDistributionLinksBody(
                   TestProperties.properties().getSurveyId(),
                   "Test link generation",
                   new Date(),
-                  TestProperties.properties().getMailingListId());
+                  mailListId);
+
           var ret = c.generateDistributionLinks(body);
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
@@ -283,9 +311,19 @@ public class QualtrixRestTemplateClientTest {
     runCatchExceptions(
         newClient(),
         c -> {
+          var mailListId = createMailingListHelper(c);
+          var body =
+              new GenerateDistributionLinksBody(
+                  TestProperties.properties().getSurveyId(),
+                  "Test link generation",
+                  new Date(),
+                  mailListId);
+
+          var genLinksRet = c.generateDistributionLinks(body);
+
           var ret =
               c.retrieveGeneratedLinks(
-                  TestProperties.properties().getDistributionLinksId(),
+                  genLinksRet.getBody().getResult().getId(),
                   TestProperties.properties().getSurveyId());
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");

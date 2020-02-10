@@ -2,6 +2,7 @@ package qualtrix;
 
 class EndPoints {
   public static class V3 {
+
     static class WhoAmI {
       static String path() {
         return "API/v3/whoami";
@@ -69,6 +70,12 @@ class EndPoints {
     static class GenerateDistributionLinks {
       static String path() {
         return "API/v3/distributions";
+      }
+    }
+
+    static class DeleteMailingList {
+      static String path(String mailingListId) {
+        return String.format("%s/%s", "API/v3/mailinglists", mailingListId);
       }
     }
 

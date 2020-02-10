@@ -14,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient.RequestHeaders
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.CreateContact.CreateContactResponse;
 import qualtrix.responses.V3.DeleteContact.DeleteContactResponse;
+import qualtrix.responses.V3.DeleteMailingList.DeleteMailingListResponse;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinkResponse;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody;
 import qualtrix.responses.V3.ListMailingLists.ListMailingListsResponse;
@@ -229,7 +230,7 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
   public Mono<ResponseEntity<CreateMailingListResponse>> createMailingList(
       CreateMailingListBody body) {
 
-    return this.getRequest(EndPoints.V3.CreateMailingList.path())
+    return this.postRequest(EndPoints.V3.CreateMailingList.path(), body)
         .retrieve()
         .toEntity(CreateMailingListResponse.class);
   }
@@ -247,6 +248,14 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
     return this.postRequest(EndPoints.V3.CreateContact.path(mailingListId), body)
         .retrieve()
         .toEntity(CreateContactResponse.class);
+  }
+
+  public Mono<ResponseEntity<DeleteMailingListResponse>> deleteMailingList(
+          String mailingListId) {
+
+    return this.deleteRequest(EndPoints.V3.DeleteMailingList.path(mailingListId))
+            .retrieve()
+            .toEntity(DeleteMailingListResponse.class);
   }
 
   public Mono<ResponseEntity<DeleteContactResponse>> deleteContact(

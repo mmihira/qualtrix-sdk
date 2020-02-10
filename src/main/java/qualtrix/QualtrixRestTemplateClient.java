@@ -15,6 +15,7 @@ import qualtrix.exceptions.ExportTimedout;
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.CreateContact.CreateContactResponse;
 import qualtrix.responses.V3.DeleteContact.DeleteContactResponse;
+import qualtrix.responses.V3.DeleteMailingList.DeleteMailingListResponse;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinkResponse;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody;
 import qualtrix.responses.V3.ListMailingLists.ListMailingListsResponse;
@@ -196,6 +197,12 @@ public class QualtrixRestTemplateClient extends QualtrixClientBase {
     String url = this.buildRequestUrl(EndPoints.V3.CreateMailingList.path());
     var entity = new HttpEntity<>(body, this.genericPostHeaders());
     return this.restClient.exchange(url, HttpMethod.POST, entity, CreateMailingListResponse.class);
+  }
+
+  public ResponseEntity<DeleteMailingListResponse> deleteMailingList(String mailingListId) {
+    String url = this.buildRequestUrl(EndPoints.V3.DeleteMailingList.path(mailingListId));
+    var entity = new HttpEntity<>(this.genericPostHeaders());
+    return this.restClient.exchange(url, HttpMethod.DELETE, entity, DeleteMailingListResponse.class);
   }
 
   public ResponseEntity<ListMailingListsResponse> listMailingList() {

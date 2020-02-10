@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Date;
+import java.util.UUID;
 import java.util.function.Function;
 
 import static org.junit.Assert.assertThrows;
@@ -214,82 +215,87 @@ public class QualtrixWebFluxClientTest {
         });
   }
 
-    @Test
-    public void createMailingList() throws IOException {
-        var libraryId = TestProperties.properties().getLibraryId();
-        var newCategory = "Something";
-        var name = "New Mailing List";
-        runCatchExceptions(
-                newClient(),
-                c -> {
-                    var input = new CreateMailingListBody(newCategory, libraryId, name);
-                    var ret = c.createMailingList(input).block();
-                    Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
-                    Assert.assertNotNull(ret.getBody().getResult().getId());
-                    Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
-                });
-    }
+  @Test
+  public void createMailingList() throws IOException {
+    var libraryId = TestProperties.properties().getLibraryId();
+    var newCategory = "Qualtrix-SDK-Test";
+    var name = UUID.randomUUID().toString();
+    runCatchExceptions(
+        newClient(),
+        c -> {
+          var input = new CreateMailingListBody(newCategory, libraryId, name);
+          var ret = c.createMailingList(input).block();
+          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+          Assert.assertNotNull(ret.getBody().getResult().getId());
+          Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
 
-    @Test
-    public void listMailingList() throws IOException {
-        runCatchExceptions(
-                newClient(),
-                c -> {
-                    var ret = c.listMailingList().block();
-                    Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
-                    Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
-                });
-    }
+          var delret = c.deleteMailingList(ret.getBody().getResult().getId()).block();
+          Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
+        });
+  }
 
-    @Test
-    public void deleteContact() throws IOException {
-        runCatchExceptions(
-                newClient(),
-                c -> {
-                    // First create a new contact
-                    var body =
-                            new CreateContactBody("test@gmal.com", null, null, "bob", "eng", "getRequest", true);
-                    var ret = c.createContact(TestProperties.properties().getMailingListId(), body).block();
-                    Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
-                    Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
-                    var contactId = ret.getBody().getResult().getId();
+  @Test
+  public void listMailingList() throws IOException {
+    runCatchExceptions(
+        newClient(),
+        c -> {
+          var ret = c.listMailingList().block();
+          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
+        });
+  }
 
-                    // Now try and delete the contact
-                    var del = c.deleteContact(TestProperties.properties().getMailingListId(), contactId).block();
-                    Assert.assertEquals(del.getStatusCode(), HttpStatus.OK);
-                    Assert.assertEquals(del.getBody().getMeta().getHttpStatus(), "200 - OK");
-                });
-    }
+  @Test
+  public void deleteContact() throws IOException {
+    runCatchExceptions(
+        newClient(),
+        c -> {
+          // First create a new contact
+          var body =
+              new CreateContactBody("test@gmal.com", null, null, "bob", "eng", "getRequest", true);
+          var ret = c.createContact(TestProperties.properties().getMailingListId(), body).block();
+          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
+          var contactId = ret.getBody().getResult().getId();
 
-    @Test
-    public void generateDistributionLinks() throws IOException {
-        runCatchExceptions(
-                newClient(),
-                c -> {
-                    var body =
-                            new GenerateDistributionLinksBody(
-                                    TestProperties.properties().getSurveyId(),
-                                    "Test link generation",
-                                    new Date(),
-                                    TestProperties.properties().getMailingListId());
-                    var ret = c.generateDistributionLinks(body).block();
-                    Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
-                    Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
-                });
-    }
+          // Now try and delete the contact
+          var del =
+              c.deleteContact(TestProperties.properties().getMailingListId(), contactId).block();
+          Assert.assertEquals(del.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(del.getBody().getMeta().getHttpStatus(), "200 - OK");
+        });
+  }
 
-    @Test
-    public void retrieveGeneratedLinks() throws IOException {
-        runCatchExceptions(
-                newClient(),
-                c -> {
-                    var ret =
-                            c.retrieveGeneratedLinks(
-                                    TestProperties.properties().getDistributionLinksId(),
-                                    TestProperties.properties().getSurveyId()).block();
-                    Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
-                    Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
-                });
-    }
+  @Test
+  public void generateDistributionLinks() throws IOException {
+    runCatchExceptions(
+        newClient(),
+        c -> {
+          var body =
+              new GenerateDistributionLinksBody(
+                  TestProperties.properties().getSurveyId(),
+                  "Test link generation",
+                  new Date(),
+                  TestProperties.properties().getMailingListId());
+          var ret = c.generateDistributionLinks(body).block();
+          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
+        });
+  }
 
+  @Test
+  public void retrieveGeneratedLinks() throws IOException {
+    runCatchExceptions(
+        newClient(),
+        c -> {
+          var ret =
+              c.retrieveGeneratedLinks(
+                      TestProperties.properties().getDistributionLinksId(),
+                      TestProperties.properties().getSurveyId())
+                  .block();
+          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
+        });
+  }
 }
