@@ -10,5 +10,5 @@ import qualtrix.responses.V3.ResponseExport.CreateResponseExportResult;
 @RequiredArgsConstructor
 @NoArgsConstructor
 public class CreateMailingListResponse extends BaseResponse {
-  @NonNull private CreateResponseExportResult result;
+  @NonNull private CreateMailingListResponseResult result;
 }
