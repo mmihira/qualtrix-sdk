@@ -243,6 +243,12 @@ public class QualtrixRestTemplateClientTest {
           Assert.assertNotNull(ret.getBody().getResult().getId());
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
 
+          // Get the list
+          var mailingListId = ret.getBody().getResult().getId();
+          var mailingList = c.getMailingList(mailingListId);
+          Assert.assertEquals(mailingList.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(mailingList.getBody().getResult().getId(), mailingListId);
+
           var delret = c.deleteMailingList(ret.getBody().getResult().getId());
           Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");

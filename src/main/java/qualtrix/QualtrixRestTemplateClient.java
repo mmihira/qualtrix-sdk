@@ -18,6 +18,8 @@ import qualtrix.responses.V3.DeleteContact.DeleteContactResponse;
 import qualtrix.responses.V3.DeleteMailingList.DeleteMailingListResponse;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinkResponse;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody;
+import qualtrix.responses.V3.GetMailingList.GetMailingListResponse;
+import qualtrix.responses.V3.ListContacts.ListContactsResponse;
 import qualtrix.responses.V3.ListMailingLists.ListMailingListsResponse;
 import qualtrix.responses.V3.MailingList.CreateMailingListBody;
 import qualtrix.responses.V3.MailingList.CreateMailingListResponse;
@@ -202,11 +204,17 @@ public class QualtrixRestTemplateClient extends QualtrixClientBase {
   public ResponseEntity<DeleteMailingListResponse> deleteMailingList(String mailingListId) {
     String url = this.buildRequestUrl(EndPoints.V3.DeleteMailingList.path(mailingListId));
     var entity = new HttpEntity<>(this.genericPostHeaders());
-    return this.restClient.exchange(url, HttpMethod.DELETE, entity, DeleteMailingListResponse.class);
+    return this.restClient.exchange(
+        url, HttpMethod.DELETE, entity, DeleteMailingListResponse.class);
   }
 
   public ResponseEntity<ListMailingListsResponse> listMailingList() {
     return this.getRequest(EndPoints.V3.ListMailingLists.path(), ListMailingListsResponse.class);
+  }
+
+  public ResponseEntity<GetMailingListResponse> getMailingList(String mailingListId) {
+    return this.getRequest(
+        EndPoints.V3.GetMailingList.path(mailingListId), GetMailingListResponse.class);
   }
 
   public ResponseEntity<CreateContactResponse> createContact(
@@ -215,6 +223,12 @@ public class QualtrixRestTemplateClient extends QualtrixClientBase {
     String url = this.buildRequestUrl(EndPoints.V3.CreateContact.path(mailingListId));
     var entity = new HttpEntity<>(body, this.genericPostHeaders());
     return this.restClient.exchange(url, HttpMethod.POST, entity, CreateContactResponse.class);
+  }
+
+  public ResponseEntity<ListContactsResponse> listContacts(String mailingListId) {
+
+    return this.getRequest(
+        EndPoints.V3.ListContacts.path(mailingListId), ListContactsResponse.class);
   }
 
   public ResponseEntity<DeleteContactResponse> deleteContact(

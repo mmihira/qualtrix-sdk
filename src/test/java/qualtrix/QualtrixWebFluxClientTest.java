@@ -82,6 +82,19 @@ public class QualtrixWebFluxClientTest {
     return newClient(TestProperties.getQualtrixTestKey());
   }
 
+  private String createMailingListHelper(QualtrixWebFluxClient c) throws IOException {
+    var libraryId = TestProperties.properties().getLibraryId();
+    var newCategory = "Qualtrix-SDK-Test";
+    var name = UUID.randomUUID().toString();
+    // First create  a mailing list
+    var input = new CreateMailingListBody(newCategory, libraryId, name);
+    var mailRet = c.createMailingList(input).block();
+    Assert.assertEquals(mailRet.getStatusCode(), HttpStatus.OK);
+    Assert.assertNotNull(mailRet.getBody().getResult().getId());
+    Assert.assertEquals(mailRet.getBody().getMeta().getHttpStatus(), "200 - OK");
+    return mailRet.getBody().getResult().getId();
+  }
+
   @Test
   public void whoAmI() throws IOException {
     runCatchExceptions(
@@ -217,19 +230,17 @@ public class QualtrixWebFluxClientTest {
 
   @Test
   public void createMailingList() throws IOException {
-    var libraryId = TestProperties.properties().getLibraryId();
-    var newCategory = "Qualtrix-SDK-Test";
-    var name = UUID.randomUUID().toString();
     runCatchExceptions(
         newClient(),
         c -> {
-          var input = new CreateMailingListBody(newCategory, libraryId, name);
-          var ret = c.createMailingList(input).block();
-          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
-          Assert.assertNotNull(ret.getBody().getResult().getId());
-          Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
+          var mailingListId = createMailingListHelper(c);
 
-          var delret = c.deleteMailingList(ret.getBody().getResult().getId()).block();
+          // Get the list
+          var mailingList = c.getMailingList(mailingListId).block();
+          Assert.assertEquals(mailingList.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(mailingList.getBody().getResult().getId(), mailingListId);
+
+          var delret = c.deleteMailingList(mailingListId).block();
           Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
@@ -251,21 +262,60 @@ public class QualtrixWebFluxClientTest {
     runCatchExceptions(
         newClient(),
         c -> {
+          // Create a new mailing list
+          var mailingListId = createMailingListHelper(c);
+
           // First create a new contact
           var body =
               new CreateContactBody("test@gmal.com", null, null, "bob", "eng", "getRequest", true);
-          var ret = c.createContact(TestProperties.properties().getMailingListId(), body).block();
+          var ret = c.createContact(mailingListId, body).block();
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
           var contactId = ret.getBody().getResult().getId();
 
           // Now try and delete the contact
-          var del =
-              c.deleteContact(TestProperties.properties().getMailingListId(), contactId).block();
+          var del = c.deleteContact(mailingListId, contactId).block();
           Assert.assertEquals(del.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(del.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          // Delete the mailing list
+          var delret = c.deleteMailingList(mailingListId).block();
+          Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
   }
+
+    @Test
+    public void createListContacts() throws IOException {
+    runCatchExceptions(
+        newClient(),
+        c -> {
+          // Create a new mailing list
+          var mailingListId = createMailingListHelper(c);
+
+          // First create a new contact
+          var body =
+              new CreateContactBody("test@gmal.com", null, null, "bob", "eng", "getRequest", true);
+          var ret = c.createContact(mailingListId, body).block();
+          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
+          var contactId = ret.getBody().getResult().getId();
+
+          var contactsList = c.listContacts(mailingListId).block();
+          Assert.assertEquals(contactsList.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(contactsList.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          // Now try and delete the contact
+          var del = c.deleteContact(mailingListId, contactId).block();
+          Assert.assertEquals(del.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(del.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          // Delete the mailing list
+          var delret = c.deleteMailingList(mailingListId).block();
+          Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
+        });
+    }
 
   @Test
   public void generateDistributionLinks() throws IOException {
