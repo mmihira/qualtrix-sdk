@@ -1,4 +1,4 @@
-package qualtrix;
+package assets;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
@@ -12,7 +12,7 @@ import java.util.Map;
 @Data
 @ToString(onlyExplicitlyIncluded = true, callSuper = true)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
-public class F extends AbstractSurveyResult {
+public class ExampleAbstractSurveyResult extends AbstractSurveyResult {
   @JsonProperty("questions")
   private Map<String, Object> questions = new HashMap<String, Object>();
 }

@@ -9,5 +9,5 @@ import lombok.NonNull;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateMailingListResponseResult {
-    @NonNull private String id;
+  @NonNull private String id;
 }

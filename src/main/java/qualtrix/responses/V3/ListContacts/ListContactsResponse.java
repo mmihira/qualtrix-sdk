@@ -9,5 +9,5 @@ import qualtrix.responses.V3.BaseResponse;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ListContactsResponse extends BaseResponse {
-    private ListContactsResponseResult result;
+  private ListContactsResponseResult result;
 }

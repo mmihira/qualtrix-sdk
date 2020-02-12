@@ -1,7 +1,7 @@
-package qualtrix;
+package assets;
 
 import lombok.NoArgsConstructor;
 import qualtrix.responses.V3.Survey.SurveyResponse;
 
 @NoArgsConstructor
-public class G extends SurveyResponse<F> {}
+public class ExampleSurveyResponse extends SurveyResponse<ExampleAbstractSurveyResult> {}

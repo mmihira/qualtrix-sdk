@@ -1,4 +1,3 @@
-
 package qualtrix.responses.V3.ListContacts;
 
 import lombok.AllArgsConstructor;
@@ -9,10 +8,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EmailHistory {
-    private String date;
-    private String emailDistributionId;
-    private Boolean read;
-    private String result;
-    private String surveyId;
-    private String type;
+  private String date;
+  private String emailDistributionId;
+  private Boolean read;
+  private String result;
+  private String surveyId;
+  private String type;
 }

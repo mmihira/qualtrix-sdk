@@ -2,6 +2,7 @@ package qualtrix;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.RateLimiter;
 import lombok.*;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.MediaType;
@@ -11,9 +12,11 @@ import org.springframework.web.reactive.function.BodyExtractor;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.RequestHeadersSpec;
+import qualtrix.exceptions.RateLimitAcquireFailed;
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.CreateContact.CreateContactResponse;
 import qualtrix.responses.V3.DeleteContact.DeleteContactResponse;
+import qualtrix.responses.V3.DeleteDistribution.DeleteDistributionResponse;
 import qualtrix.responses.V3.DeleteMailingList.DeleteMailingListResponse;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinkResponse;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody;
@@ -42,12 +45,15 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.zip.ZipInputStream;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 public class QualtrixWebFluxClient extends QualtrixClientBase {
   private final WebClient webClient;
+  private final RateLimiter rateLimiter;
+  private Duration internalRateLimiterCheckBackOff = Duration.ofMillis(1);
 
   @NoArgsConstructor
   class InCompleteException extends Exception {
@@ -57,9 +63,54 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
   }
 
   @Builder
-  public QualtrixWebFluxClient(@NonNull String accessToken, WebClient webClient) {
+  public QualtrixWebFluxClient(
+      @NonNull String accessToken,
+      WebClient webClient,
+      RateLimiter rateLimiter,
+      Duration internalRateLimiterCheckBackOff) {
+
     super(accessToken);
     this.webClient = webClient;
+    this.rateLimiter = rateLimiter;
+    this.internalRateLimiterCheckBackOff = internalRateLimiterCheckBackOff;
+  }
+
+  public QualtrixWebFluxClient(@NonNull String accessToken, WebClient webClient) {
+
+    super(accessToken);
+    this.webClient = webClient;
+    this.rateLimiter = null;
+  }
+
+  private QualtrixWebFluxClient(
+      @NonNull String accessToken, WebClient webClient, RateLimiter rateLimiter) {
+    super(accessToken);
+    this.rateLimiter = rateLimiter;
+    this.webClient = webClient;
+  }
+
+  public static QualtrixWebFluxClient createRateLimited(
+      @NonNull String accessToken, WebClient webClient, float requestsPerSecond) {
+    return new QualtrixWebFluxClient(accessToken, webClient, RateLimiter.create(requestsPerSecond));
+  }
+
+  private Mono<Boolean> waitRate() {
+    if (this.rateLimiter == null) {
+      // Not rate limited
+      return Mono.just(true);
+    } else {
+      return Flux.defer(
+              () -> {
+                if (rateLimiter.tryAcquire()) {
+                  return Mono.just(true);
+                } else {
+                  return Mono.error(new RateLimitAcquireFailed("Acquire Failed"));
+                }
+              })
+          .retryWhen(Retry.any().fixedBackoff(this.internalRateLimiterCheckBackOff))
+          .onErrorContinue(RateLimitAcquireFailed.class, (z, x) -> {})
+          .next();
+    }
   }
 
   public RequestHeadersSpec<?> getRequest(String path) {
@@ -86,26 +137,40 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
         .header("Content-Type", MediaType.APPLICATION_JSON.toString());
   }
 
+  private <V> Mono<V> waitRateThen(Supplier<Mono<V>> f) {
+    return this.waitRate().then(f.get());
+  }
+
   public Mono<ResponseEntity<WhoAmIResponse>> whoAmI() {
-    return this.getRequest(EndPoints.V3.WhoAmI.path()).retrieve().toEntity(WhoAmIResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.WhoAmI.path()).retrieve().toEntity(WhoAmIResponse.class));
   }
 
   public Mono<ResponseEntity<SurveyListResponse>> listSurveys() {
-    return this.getRequest(EndPoints.V3.ListSurveys.path())
-        .retrieve()
-        .toEntity(SurveyListResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.ListSurveys.path())
+                .retrieve()
+                .toEntity(SurveyListResponse.class));
   }
 
   public Mono<ResponseEntity<DefaultSurveyResponse>> survey(String surveyId) {
-    return this.getRequest(EndPoints.V3.GetSurvey.forSurvey(surveyId))
-        .retrieve()
-        .toEntity(DefaultSurveyResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.GetSurvey.forSurvey(surveyId))
+                .retrieve()
+                .toEntity(DefaultSurveyResponse.class));
   }
 
   public <T extends AbstractSurveyResult, U extends SurveyResponse<T>>
       Mono<ResponseEntity<U>> survey(String surveyId, Class<U> tClass) {
 
-    return this.getRequest(EndPoints.V3.GetSurvey.forSurvey(surveyId)).retrieve().toEntity(tClass);
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.GetSurvey.forSurvey(surveyId))
+                .retrieve()
+                .toEntity(tClass));
   }
 
   public <T extends AbstractCreateResponseExportBody>
@@ -113,25 +178,33 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
           String surveyId, T body) {
 
     var endpoint = EndPoints.V3.CreateResponseExport.forSurvey(surveyId);
-    return this.postRequest(endpoint, body).retrieve().toEntity(CreateResponseExportResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.postRequest(endpoint, body)
+                .retrieve()
+                .toEntity(CreateResponseExportResponse.class));
   }
 
   public Mono<ResponseEntity<ResponseExportProgressResponse>> responseExportProgress(
       String surveyId, String exportProgressId) {
 
-    return this.getRequest(EndPoints.V3.ResponseExportProgress.path(surveyId, exportProgressId))
-        .retrieve()
-        .toEntity(ResponseExportProgressResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.ResponseExportProgress.path(surveyId, exportProgressId))
+                .retrieve()
+                .toEntity(ResponseExportProgressResponse.class));
   }
 
   public Mono<ClientResponse> createResponseExportFile(String surveyId, String fileId) {
     var url = this.buildRequestUrl(EndPoints.V3.ResponseExportFile.path(surveyId, fileId));
-    return this.webClient
-        .get()
-        .uri(url)
-        .header("X-API-TOKEN", this.getAccessToken())
-        .header("Content-Type", MediaType.APPLICATION_JSON.toString())
-        .exchange();
+    return this.waitRateThen(
+        () ->
+            this.webClient
+                .get()
+                .uri(url)
+                .header("X-API-TOKEN", this.getAccessToken())
+                .header("Content-Type", MediaType.APPLICATION_JSON.toString())
+                .exchange());
   }
 
   /** Check the return code before consuming the response body */
@@ -168,14 +241,17 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
     Function<ClientResponse, Mono<ResponseEntity<U>>> clientResponseHandler =
         clientResponse -> clientResponse.body(clientResponseBodyExtractor);
 
-    return this.createResponseExportFile(surveyId, fileId).flatMap(clientResponseHandler);
+    return this.waitRateThen(
+        () -> this.createResponseExportFile(surveyId, fileId).flatMap(clientResponseHandler));
   }
 
   public Mono<ResponseEntity<DefaultResponseExportFileResponse>> createResponseExportFileObject(
       String surveyId, String fileId) {
 
-    return createResponseExportFileObject(
-        surveyId, fileId, DefaultResponseExportFileResponse.class);
+    return this.waitRateThen(
+        () ->
+            createResponseExportFileObject(
+                surveyId, fileId, DefaultResponseExportFileResponse.class));
   }
 
   /**
@@ -209,11 +285,13 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
                 .map(fileId -> Mono.just(fileId))
                 .orElse(Mono.error(new InCompleteException()));
 
-    return Flux.defer(() -> export.flatMap(getProgress).flatMap(getFileId))
-        .retryWhen(Retry.any().fixedBackoff(retryInterval))
-        .onErrorContinue(InCompleteException.class, (z, x) -> {})
-        .flatMap(f -> createResponseExportFileObject(surveyId, f, uClass))
-        .next();
+    return this.waitRateThen(
+        () ->
+            Flux.defer(() -> export.flatMap(getProgress).flatMap(getFileId))
+                .retryWhen(Retry.any().fixedBackoff(retryInterval))
+                .onErrorContinue(InCompleteException.class, (z, x) -> {})
+                .flatMap(f -> createResponseExportFileObject(surveyId, f, uClass))
+                .next());
   }
 
   /**
@@ -225,77 +303,107 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
       Mono<ResponseEntity<DefaultResponseExportFileResponse>> createResponseExportAndGetFileDefault(
           String surveyId, Duration retryInterval, G body) {
 
-    return createResponseExportAndGetFile(
-        surveyId, retryInterval, body, DefaultResponseExportFileResponse.class);
+    return this.waitRateThen(
+        () ->
+            createResponseExportAndGetFile(
+                surveyId, retryInterval, body, DefaultResponseExportFileResponse.class));
   }
 
   public Mono<ResponseEntity<CreateMailingListResponse>> createMailingList(
       CreateMailingListBody body) {
 
-    return this.postRequest(EndPoints.V3.CreateMailingList.path(), body)
-        .retrieve()
-        .toEntity(CreateMailingListResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.postRequest(EndPoints.V3.CreateMailingList.path(), body)
+                .retrieve()
+                .toEntity(CreateMailingListResponse.class));
   }
 
   public Mono<ResponseEntity<ListMailingListsResponse>> listMailingList() {
 
-    return this.getRequest(EndPoints.V3.ListMailingLists.path())
-        .retrieve()
-        .toEntity(ListMailingListsResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.ListMailingLists.path())
+                .retrieve()
+                .toEntity(ListMailingListsResponse.class));
   }
 
   public Mono<ResponseEntity<CreateContactResponse>> createContact(
       String mailingListId, CreateContactBody body) {
 
-    return this.postRequest(EndPoints.V3.CreateContact.path(mailingListId), body)
-        .retrieve()
-        .toEntity(CreateContactResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.postRequest(EndPoints.V3.CreateContact.path(mailingListId), body)
+                .retrieve()
+                .toEntity(CreateContactResponse.class));
   }
 
-  public Mono<ResponseEntity<ListContactsResponse>> listContacts(
-          String mailingListId) {
+  public Mono<ResponseEntity<ListContactsResponse>> listContacts(String mailingListId) {
 
-    return this.getRequest(EndPoints.V3.ListContacts.path(mailingListId))
-            .retrieve()
-            .toEntity(ListContactsResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.ListContacts.path(mailingListId))
+                .retrieve()
+                .toEntity(ListContactsResponse.class));
   }
 
-  public Mono<ResponseEntity<DeleteMailingListResponse>> deleteMailingList(
-          String mailingListId) {
+  public Mono<ResponseEntity<DeleteMailingListResponse>> deleteMailingList(String mailingListId) {
 
-    return this.deleteRequest(EndPoints.V3.DeleteMailingList.path(mailingListId))
-            .retrieve()
-            .toEntity(DeleteMailingListResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.deleteRequest(EndPoints.V3.DeleteMailingList.path(mailingListId))
+                .retrieve()
+                .toEntity(DeleteMailingListResponse.class));
   }
 
   public Mono<ResponseEntity<GetMailingListResponse>> getMailingList(String mailingListId) {
 
-    return this.getRequest(EndPoints.V3.GetMailingList.path(mailingListId))
-            .retrieve()
-            .toEntity(GetMailingListResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.GetMailingList.path(mailingListId))
+                .retrieve()
+                .toEntity(GetMailingListResponse.class));
   }
 
   public Mono<ResponseEntity<DeleteContactResponse>> deleteContact(
       String mailingListId, String contactId) {
 
-    return this.deleteRequest(EndPoints.V3.DeleteContact.path(mailingListId, contactId))
-        .retrieve()
-        .toEntity(DeleteContactResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.deleteRequest(EndPoints.V3.DeleteContact.path(mailingListId, contactId))
+                .retrieve()
+                .toEntity(DeleteContactResponse.class));
   }
 
   public Mono<ResponseEntity<GenerateDistributionLinkResponse>> generateDistributionLinks(
       GenerateDistributionLinksBody body) {
 
-    return this.postRequest(EndPoints.V3.GenerateDistributionLinks.path(), body)
-        .retrieve()
-        .toEntity(GenerateDistributionLinkResponse.class);
+    return this.waitRateThen(
+        () ->
+            this.postRequest(EndPoints.V3.GenerateDistributionLinks.path(), body)
+                .retrieve()
+                .toEntity(GenerateDistributionLinkResponse.class));
   }
 
   public Mono<ResponseEntity<RetrieveGeneratedLinksResponse>> retrieveGeneratedLinks(
       String distributionId, String surveyId) {
 
-    return this.getRequest(EndPoints.V3.RetrieveGeneratedLinks.path(distributionId, surveyId))
-        .retrieve()
-        .toEntity(RetrieveGeneratedLinksResponse.class);
+    return this.waitRateThen(
+        () ->
+            QualtrixWebFluxClient.this
+                .getRequest(EndPoints.V3.RetrieveGeneratedLinks.path(distributionId, surveyId))
+                .retrieve()
+                .toEntity(RetrieveGeneratedLinksResponse.class));
+  }
+
+  public Mono<ResponseEntity<DeleteDistributionResponse>> deleteDistribution(
+      String distributionId) {
+
+    return this.waitRateThen(
+        () ->
+            QualtrixWebFluxClient.this
+                .deleteRequest(EndPoints.V3.DeleteDistribution.path(distributionId))
+                .retrieve()
+                .toEntity(DeleteDistributionResponse.class));
   }
 }

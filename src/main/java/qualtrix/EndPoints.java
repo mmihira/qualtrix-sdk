@@ -69,8 +69,7 @@ class EndPoints {
 
     static class ListContacts {
       static String path(String mailingListId) {
-        return String.format(
-                "%s/%s/%s", "API/v3/mailinglists", mailingListId, "contacts");
+        return String.format("%s/%s/%s", "API/v3/mailinglists", mailingListId, "contacts");
       }
     }
 
@@ -80,13 +79,19 @@ class EndPoints {
       }
     }
 
+    static class DeleteDistribution {
+      static String path(String distributionId) {
+        return String.format("%s/%s", "API/v3/distributions", distributionId);
+      }
+    }
+
     static class DeleteMailingList {
       static String path(String mailingListId) {
         return String.format("%s/%s", "API/v3/mailinglists", mailingListId);
       }
     }
 
-    static class GetMailingList{
+    static class GetMailingList {
       static String path(String mailingListId) {
         return String.format("%s/%s", "API/v3/mailinglists", mailingListId);
       }

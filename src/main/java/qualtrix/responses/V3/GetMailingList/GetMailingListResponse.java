@@ -9,5 +9,5 @@ import qualtrix.responses.V3.BaseResponse;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GetMailingListResponse extends BaseResponse {
-    GetMailingListResponseResult result;
+  GetMailingListResponseResult result;
 }

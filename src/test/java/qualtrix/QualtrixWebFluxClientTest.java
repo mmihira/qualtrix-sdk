@@ -1,104 +1,42 @@
 package qualtrix;
 
-import io.netty.channel.ChannelOption;
-import io.netty.handler.timeout.ReadTimeoutHandler;
-import io.netty.handler.timeout.WriteTimeoutHandler;
+import assets.ExampleSurveyResponse;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.reactive.ClientHttpResponse;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.web.reactive.function.BodyExtractor;
 import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import qualtrix.exceptions.ExportTimedout;
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody;
-import qualtrix.responses.V3.MailingList.CreateMailingListBody;
 import qualtrix.responses.V3.ResponseExport.CreateResponseExportBody;
 import qualtrix.responses.V3.ResponseExport.ResponseExportFormat;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.tcp.TcpClient;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.Date;
-import java.util.UUID;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import static org.junit.Assert.assertThrows;
 
-public class QualtrixWebFluxClientTest {
-  @FunctionalInterface
-  private interface ClientRun {
-    void Run(QualtrixWebFluxClient r) throws IOException, InterruptedException, ExportTimedout;
-  }
-
-  private void runCatchExceptions(
-      QualtrixWebFluxClient client, QualtrixWebFluxClientTest.ClientRun f) {
-    try {
-      f.Run(client);
-    } catch (WebClientResponseException e) {
-      System.out.println("WebClientResponseException");
-      System.out.println(e.getStatusText());
-      System.out.println(e.getMessage());
-      e.printStackTrace();
-      Assert.fail();
-    } catch (HttpMessageConversionException e) {
-      System.out.println(e.getMessage());
-      e.printStackTrace();
-      Assert.fail();
-    } catch (Exception e) {
-      System.out.println("error");
-      System.out.println(e);
-      e.printStackTrace();
-      Assert.fail();
-    }
-  }
-
-  private QualtrixWebFluxClient newClient(String key) throws IOException {
-    var timeoutClient =
-        TcpClient.create()
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000)
-            .doOnConnected(
-                c ->
-                    c.addHandlerLast(new ReadTimeoutHandler(5))
-                        .addHandlerLast(new WriteTimeoutHandler(5)));
-    var w =
-        WebClient.builder()
-            .clientConnector(new ReactorClientHttpConnector(HttpClient.from(timeoutClient)))
-            .build();
-    return new QualtrixWebFluxClient(key, w);
-  }
-
-  private QualtrixWebFluxClient newClient() throws IOException {
-    return newClient(TestProperties.getQualtrixTestKey());
-  }
-
-  private String createMailingListHelper(QualtrixWebFluxClient c) throws IOException {
-    var libraryId = TestProperties.properties().getLibraryId();
-    var newCategory = "Qualtrix-SDK-Test";
-    var name = UUID.randomUUID().toString();
-    // First create  a mailing list
-    var input = new CreateMailingListBody(newCategory, libraryId, name);
-    var mailRet = c.createMailingList(input).block();
-    Assert.assertEquals(mailRet.getStatusCode(), HttpStatus.OK);
-    Assert.assertNotNull(mailRet.getBody().getResult().getId());
-    Assert.assertEquals(mailRet.getBody().getMeta().getHttpStatus(), "200 - OK");
-    return mailRet.getBody().getResult().getId();
-  }
-
-  @Test
-  public void whoAmI() throws IOException {
+public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void whoAmI(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var result = c.whoAmI().block();
           Assert.assertNotNull(result);
@@ -107,8 +45,38 @@ public class QualtrixWebFluxClientTest {
         });
   }
 
+  /**
+   * Test that the rateLimiter waits for signals in parallel mode Execute API calls on separate
+   * threads and ensure that each waits in turn to get a ticket from the rate limiter.
+   */
   @Test
-  public void whoAmIWrongKey() throws IOException {
+  public void whoAmIRateLimited() throws IOException {
+    runCatchExceptions(
+        newRateLimitedClient(1),
+        c -> {
+          long startTime = ZonedDateTime.now().getSecond();
+
+          Flux.fromIterable(List.of(c.whoAmI(), c.whoAmI(), c.whoAmI(), c.whoAmI()))
+              .parallel()
+              .runOn(Schedulers.parallel())
+              .map(Mono::toFuture)
+              .sequential()
+              .collectList()
+              .flatMap(
+                  x ->
+                      Mono.just(
+                          CompletableFuture.allOf(x.toArray(new CompletableFuture[x.size()]))))
+              .block()
+              .join();
+
+          long elapsedTimeSeconds = ZonedDateTime.now().getSecond() - startTime;
+          log.info(String.format("whoAmIRateLimited: Elapsed time = %d", elapsedTimeSeconds));
+          Assert.assertEquals(true, elapsedTimeSeconds >= 3);
+        });
+  }
+
+  @Test
+  public void whoAmIWrongKey() {
     assertThrows(
         WebClientResponseException.class,
         () -> {
@@ -116,10 +84,11 @@ public class QualtrixWebFluxClientTest {
         });
   }
 
-  @Test
-  public void listSurveys() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void listSurveys(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var result = c.listSurveys().block();
           Assert.assertNotNull(result);
@@ -128,10 +97,11 @@ public class QualtrixWebFluxClientTest {
         });
   }
 
-  @Test
-  public void survey1() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void survey1(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var surveyId = TestProperties.properties().getSurveyId();
           var ret = c.survey(surveyId).block();
@@ -140,22 +110,24 @@ public class QualtrixWebFluxClientTest {
         });
   }
 
-  @Test
-  public void survey2() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void survey2(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var surveyId = TestProperties.properties().getSurveyId();
-          var ret = c.survey(surveyId, G.class).block();
+          var ret = c.survey(surveyId, ExampleSurveyResponse.class).block();
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
   }
 
-  @Test
-  public void createResponseExport() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void createResponseExport(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var surveyId = TestProperties.properties().getSurveyId();
           var ret =
@@ -167,8 +139,9 @@ public class QualtrixWebFluxClientTest {
   }
 
   /** Here's an example of how you can implement your own custom parse when retrieving a file */
-  @Test
-  public void createResponseExportFile() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void createResponseExportFile(QualtrixWebFluxClient client) throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
     var fileId = TestProperties.properties().getExportFileId();
 
@@ -191,32 +164,35 @@ public class QualtrixWebFluxClientTest {
         clientResponse -> clientResponse.body(clientHttpBodyExtractor);
 
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var ret = c.createResponseExportFile(surveyId, fileId).flatMap(clientResponseHandler);
           Assert.assertEquals(ret.block().getStatusCode(), HttpStatus.OK);
         });
   }
 
-  @Test
-  public void createResponseExportFileObject1() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void createResponseExportFileObject1(QualtrixWebFluxClient client) throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
     var fileId = TestProperties.properties().getExportFileId();
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var ret = c.createResponseExportFileObject(surveyId, fileId).block();
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
         });
   }
 
-  @Test
-  public void createResponseExportAndGetFileDefault() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void createResponseExportAndGetFileDefault(QualtrixWebFluxClient client)
+      throws IOException {
     var surveyId = TestProperties.properties().getSurveyId();
     var fileId = TestProperties.properties().getExportFileId();
 
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var ret =
               c.createResponseExportAndGetFileDefault(
@@ -228,10 +204,11 @@ public class QualtrixWebFluxClientTest {
         });
   }
 
-  @Test
-  public void createMailingList() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void createMailingList(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var mailingListId = createMailingListHelper(c);
 
@@ -246,10 +223,11 @@ public class QualtrixWebFluxClientTest {
         });
   }
 
-  @Test
-  public void listMailingList() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void listMailingList(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           var ret = c.listMailingList().block();
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
@@ -257,10 +235,11 @@ public class QualtrixWebFluxClientTest {
         });
   }
 
-  @Test
-  public void deleteContact() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void deleteContact(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           // Create a new mailing list
           var mailingListId = createMailingListHelper(c);
@@ -285,10 +264,11 @@ public class QualtrixWebFluxClientTest {
         });
   }
 
-    @Test
-    public void createListContacts() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void createListContacts(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
           // Create a new mailing list
           var mailingListId = createMailingListHelper(c);
@@ -315,37 +295,41 @@ public class QualtrixWebFluxClientTest {
           Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
-    }
+  }
 
-  @Test
-  public void generateDistributionLinks() throws IOException {
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void generateRetrieveDeleteDistributionLinks(QualtrixWebFluxClient client) {
     runCatchExceptions(
-        newClient(),
+        client,
         c -> {
+          var mailingListId = createMailingListHelper(c);
           var body =
               new GenerateDistributionLinksBody(
                   TestProperties.properties().getSurveyId(),
                   "Test link generation",
                   new Date(),
-                  TestProperties.properties().getMailingListId());
-          var ret = c.generateDistributionLinks(body).block();
-          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
-          Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
-        });
-  }
+                  mailingListId);
+          var cret = c.generateDistributionLinks(body).block();
+          Assert.assertEquals(cret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(cret.getBody().getMeta().getHttpStatus(), "200 - OK");
 
-  @Test
-  public void retrieveGeneratedLinks() throws IOException {
-    runCatchExceptions(
-        newClient(),
-        c -> {
           var ret =
               c.retrieveGeneratedLinks(
-                      TestProperties.properties().getDistributionLinksId(),
-                      TestProperties.properties().getSurveyId())
+                      cret.getBody().getResult().getId(), TestProperties.properties().getSurveyId())
                   .block();
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          // Delete the distribution
+          var delRet = c.deleteDistribution(cret.getBody().getResult().getId()).block();
+          Assert.assertEquals(delRet.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(delRet.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          // Delete the mailing list
+          var delret = c.deleteMailingList(mailingListId).block();
+          Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
   }
 }
