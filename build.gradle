@@ -32,7 +32,7 @@ dependencies {
     compile "io.projectreactor.netty:reactor-netty:0.9.4.RELEASE"
     compile group: 'io.projectreactor.addons', name: 'reactor-extra', version: '3.3.2.RELEASE'
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.0'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.0' 
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.0'
 }
 
 test {
@@ -151,7 +151,7 @@ publishing {
             customizePom(pom)
             groupId 'io.github.mmihira'
             artifactId 'qualtrix-sdk'
-            version '0.1.13'
+            version '0.2.0'
 
             from components.java
 
