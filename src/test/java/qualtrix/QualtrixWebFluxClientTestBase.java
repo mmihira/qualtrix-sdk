@@ -11,6 +11,7 @@ import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import qualtrix.exceptions.ExportTimedout;
+import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.MailingList.CreateMailingListBody;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
@@ -103,6 +104,27 @@ public class QualtrixWebFluxClientTestBase {
 
     var input = new CreateMailingListBody(newCategory, libraryId, name);
     var mailRet = c.createMailingList(input).block();
+
+    Assert.assertEquals(mailRet.getStatusCode(), HttpStatus.OK);
+    Assert.assertNotNull(mailRet.getBody().getResult().getId());
+    Assert.assertEquals(mailRet.getBody().getMeta().getHttpStatus(), "200 - OK");
+    return mailRet.getBody().getResult().getId();
+  }
+
+  protected String createMailingListWithContactHelper(QualtrixWebFluxClient c) throws IOException {
+    var libraryId = TestProperties.properties().getLibraryId();
+    var newCategory = "Qualtrix-SDK-Test";
+    var name = UUID.randomUUID().toString();
+
+    var input = new CreateMailingListBody(newCategory, libraryId, name);
+    var mailRet = c.createMailingList(input).block();
+
+    // First create a new contact
+    var body =
+            new CreateContactBody("test@gmal.com", null, null, "bob", "eng", "getRequest", true);
+    var ret = c.createContact(mailRet.getBody().getResult().getId(), body).block();
+    Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+    Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
 
     Assert.assertEquals(mailRet.getStatusCode(), HttpStatus.OK);
     Assert.assertNotNull(mailRet.getBody().getResult().getId());

@@ -303,7 +303,7 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
     runCatchExceptions(
         client,
         c -> {
-          var mailingListId = createMailingListHelper(c);
+          var mailingListId = createMailingListWithContactHelper(c);
           var body =
               new GenerateDistributionLinksBody(
                   TestProperties.properties().getSurveyId(),
