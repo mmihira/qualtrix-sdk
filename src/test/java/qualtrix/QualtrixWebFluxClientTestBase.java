@@ -1,5 +1,7 @@
 package qualtrix;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
@@ -134,5 +136,10 @@ public class QualtrixWebFluxClientTestBase {
 
   static Stream<QualtrixWebFluxClient> clientProvider() throws IOException {
     return Stream.of(newClient(), newRateLimitedClient(1));
+  }
+
+  static String asPrettyJson(Object o) throws JsonProcessingException {
+    ObjectMapper objectMapper = new ObjectMapper();
+    return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(o);
   }
 }

@@ -14,6 +14,7 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody;
+import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime;
 import qualtrix.responses.V3.ResponseExport.CreateResponseExportBody;
 import qualtrix.responses.V3.ResponseExport.ResponseExportFormat;
 import reactor.core.publisher.Flux;
@@ -23,9 +24,13 @@ import reactor.core.scheduler.Schedulers;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Date;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -297,6 +302,19 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
         });
   }
 
+  private void cleanUpDistributionMailingList(
+      QualtrixWebFluxClient c, String distributionId, String mailingListId) {
+    // Delete the distribution
+    var delRet = c.deleteDistribution(distributionId).block();
+    Assert.assertEquals(delRet.getStatusCode(), HttpStatus.OK);
+    Assert.assertEquals(delRet.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+    // Delete the mailing list
+    var delret = c.deleteMailingList(mailingListId).block();
+    Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
+    Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
+  }
+
   @ParameterizedTest
   @MethodSource("clientProvider")
   public void generateRetrieveDeleteDistributionLinks(QualtrixWebFluxClient client) {
@@ -304,11 +322,17 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
         client,
         c -> {
           var mailingListId = createMailingListWithContactHelper(c);
+          var date =
+              LocalDateTime.now()
+                  .plus(1, ChronoUnit.DAYS)
+                  .plus(8, ChronoUnit.HOURS)
+                  .atZone(ZoneId.of("Australia/Melbourne"));
+
           var body =
-              new GenerateDistributionLinksBody(
+              new GenerateDistributionLinksBodyWithZonedDateTime(
                   TestProperties.properties().getSurveyId(),
                   "Test link generation",
-                  new Date(),
+                  date,
                   mailingListId);
           var cret = c.generateDistributionLinks(body).block();
           Assert.assertEquals(cret.getStatusCode(), HttpStatus.OK);
@@ -321,15 +345,51 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
 
-          // Delete the distribution
-          var delRet = c.deleteDistribution(cret.getBody().getResult().getId()).block();
-          Assert.assertEquals(delRet.getStatusCode(), HttpStatus.OK);
-          Assert.assertEquals(delRet.getBody().getMeta().getHttpStatus(), "200 - OK");
+          // Check the expiry date is correct
+          var expiryDate = ret.getBody().getResult().getElements().get(0).getLinkExpiration();
+          var expiryDateAtLocal = expiryDate.atZoneSameInstant(ZoneId.of("Australia/Melbourne"));
+          Assert.assertTrue(expiryDateAtLocal.equals(date.withNano(0)));
 
-          // Delete the mailing list
-          var delret = c.deleteMailingList(mailingListId).block();
-          Assert.assertEquals(delret.getStatusCode(), HttpStatus.OK);
-          Assert.assertEquals(delret.getBody().getMeta().getHttpStatus(), "200 - OK");
+          cleanUpDistributionMailingList(c, cret.getBody().getResult().getId(), mailingListId);
+        });
+  }
+
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void generateRetrieveDeleteDistributionLinksStringDate(QualtrixWebFluxClient client) {
+    runCatchExceptions(
+        client,
+        c -> {
+          var mailingListId = createMailingListWithContactHelper(c);
+          var date = LocalDateTime.now().plus(1, ChronoUnit.DAYS).plus(8, ChronoUnit.HOURS);
+
+          var dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
+          var body =
+              new GenerateDistributionLinksBody(
+                  TestProperties.properties().getSurveyId(),
+                  "Test link generation",
+                  dateFormatter.format(date),
+                  mailingListId);
+
+          var cret = c.generateDistributionLinks(body).block();
+          Assert.assertEquals(cret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(cret.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          var ret =
+              c.retrieveGeneratedLinks(
+                      cret.getBody().getResult().getId(), TestProperties.properties().getSurveyId())
+                  .block();
+          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          // Check the expiry date is correct
+          var expiryDate = ret.getBody().getResult().getElements().get(0).getLinkExpiration();
+          var expiryDateAtMountainTime =
+              expiryDate.atZoneSameInstant(ZoneId.of("America/Chihuahua"));
+          Assert.assertEquals(
+              dateFormatter.format(date), dateFormatter.format(expiryDateAtMountainTime));
+
+          cleanUpDistributionMailingList(c, cret.getBody().getResult().getId(), mailingListId);
         });
   }
 }
