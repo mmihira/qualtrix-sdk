@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 @RequiredArgsConstructor
 @NoArgsConstructor
-class SurveyListResult {
+public class SurveyListResult {
   @NonNull private List<SurveyListResultElement> elements;
   // next page can be null if there is no next page
   private String nextPage;

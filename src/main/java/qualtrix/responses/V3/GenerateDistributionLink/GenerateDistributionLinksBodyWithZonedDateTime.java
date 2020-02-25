@@ -2,7 +2,7 @@ package qualtrix.responses.V3.GenerateDistributionLink;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.*;
-import qualtrix.json.LinkCreationExpiryZonedDateTimeSerializer;
+import qualtrix.json.QualtrixLinkCreationExpiryZonedDateTimeSerializer;
 
 import java.time.ZonedDateTime;
 
@@ -12,7 +12,7 @@ import java.time.ZonedDateTime;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class GenerateDistributionLinksBodyWithZonedDateTime extends AbstractGenerateDistributionLinksBody {
-  @JsonSerialize(using = LinkCreationExpiryZonedDateTimeSerializer.class)
+  @JsonSerialize(using = QualtrixLinkCreationExpiryZonedDateTimeSerializer.class)
   private ZonedDateTime expirationDate;
 
   public GenerateDistributionLinksBodyWithZonedDateTime(

@@ -7,10 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import qualtrix.json.LinkExpiryDeserializer;
+import qualtrix.json.QualtrixDateTimeSerializer;
 
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 
 @Data
 @ToString(callSuper = true)
@@ -26,8 +25,8 @@ public class RetrieveGeneratedLinkResponseResultElement {
   private String link;
 
   @JsonSerialize(using = ToStringSerializer.class)
-  @JsonDeserialize(using = LinkExpiryDeserializer.class)
-  private OffsetDateTime linkExpiration;
+  @JsonDeserialize(using = QualtrixDateTimeSerializer.class)
+  private LocalDateTime linkExpiration;
 
   private String status;
   private int unsubscribed;

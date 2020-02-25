@@ -1,3 +1,10 @@
 package qualtrix.responses.V3.Survey;
 
-class SurveyResult extends AbstractSurveyResult {}
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
+@Data
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
+public class SurveyResult extends AbstractSurveyResult {}

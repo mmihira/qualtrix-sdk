@@ -17,11 +17,14 @@ import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksB
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime;
 import qualtrix.responses.V3.ResponseExport.CreateResponseExportBody;
 import qualtrix.responses.V3.ResponseExport.ResponseExportFormat;
+import qualtrix.responses.V3.Survey.SurveyResult;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -33,7 +36,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.zip.ZipInputStream;
 
 import static org.junit.Assert.assertThrows;
 
@@ -111,6 +113,7 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
         c -> {
           var surveyId = TestProperties.properties().getSurveyId();
           var ret = c.survey(surveyId).block();
+          System.out.println(ret.getBody().asPrettyJson());
           Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
@@ -362,7 +365,10 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
 
           // Check the expiry date is correct
           var expiryDate = ret.getBody().getResult().getElements().get(0).getLinkExpiration();
-          var expiryDateAtLocal = expiryDate.atZoneSameInstant(ZoneId.of("Australia/Melbourne"));
+          var expiryDateAtLocal =
+              expiryDate
+                  .atZone(ZoneId.of("UTC"))
+                  .withZoneSameInstant(ZoneId.of("Australia/Melbourne"));
           Assert.assertTrue(expiryDateAtLocal.equals(date.withNano(0)));
 
           cleanUpDistributionMailingList(c, cret.getBody().getResult().getId(), mailingListId);
@@ -400,7 +406,9 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
           // Check the expiry date is correct
           var expiryDate = ret.getBody().getResult().getElements().get(0).getLinkExpiration();
           var expiryDateAtMountainTime =
-              expiryDate.atZoneSameInstant(ZoneId.of("America/Chihuahua"));
+              expiryDate
+                  .atZone(ZoneId.of("UTC"))
+                  .withZoneSameInstant(ZoneId.of("America/Chihuahua"));
           Assert.assertEquals(
               dateFormatter.format(date), dateFormatter.format(expiryDateAtMountainTime));
 

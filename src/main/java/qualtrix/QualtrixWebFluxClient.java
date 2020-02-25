@@ -411,11 +411,10 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
    * The Qualtrix API for generating distribution links accepts a specific date time format which is
    * different from the rest of the API and it is interpreted as MST("America/Chihuahua")
    * https://api.qualtrics.com/reference#distribution-create-1 To get the correct date one option is
-   * to use {@link
-   * qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime}
+   * to use {@link  qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime}
    * in the request body and zone the required expiry date to your timezone. The library will
-   * convert to MST for you. The other option is to use {@link
-   * qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody} and set the date
+   * convert to MST for you. The other option is to use
+   * {@link qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody} and set the date
    * as a string yourself. Note the return expiry date will be given in UTC time.
    */
   public <T extends AbstractGenerateDistributionLinksBody>

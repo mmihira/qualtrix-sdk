@@ -10,7 +10,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-public class LinkCreationExpiryZonedDateTimeSerializer extends JsonSerializer<ZonedDateTime> {
+public class QualtrixLinkCreationExpiryZonedDateTimeSerializer extends JsonSerializer<ZonedDateTime> {
   public static final DateTimeFormatter dateFormatter =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
           .withZone(ZoneId.of("America/Chihuahua"));

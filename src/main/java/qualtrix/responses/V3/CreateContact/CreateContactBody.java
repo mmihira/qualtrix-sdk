@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,7 +14,7 @@ public class CreateContactBody {
   private String email;
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  private EmbeddedData embeddedData;
+  private Map<String,String> embeddedData;
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private String externalDataRef;
