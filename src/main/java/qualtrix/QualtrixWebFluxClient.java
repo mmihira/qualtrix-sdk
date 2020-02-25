@@ -41,11 +41,15 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.retry.Retry;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 @ToString(callSuper = true)
@@ -141,6 +145,19 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
     return this.waitRate().then(f.get());
   }
 
+  public class InputStreamCollector {
+    private InputStream is;
+
+    public void collectInputStream(InputStream is) {
+      if (this.is == null) this.is = is;
+      this.is = new SequenceInputStream(this.is, is);
+    }
+
+    public InputStream getInputStream() {
+      return this.is;
+    }
+  }
+
   public Mono<ResponseEntity<WhoAmIResponse>> whoAmI() {
     return this.waitRateThen(
         () ->
@@ -214,28 +231,43 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
       Mono<ResponseEntity<U>> createResponseExportFileObject(
           String surveyId, String fileId, Class<U> uClass) {
 
-    Function<ClientHttpResponse, Function<DataBuffer, Flux<ResponseEntity<U>>>> parseDataBuffer =
-        clientHttpResponse ->
-            dataBuffer -> {
-              try (ZipInputStream zipInputStream = new ZipInputStream(dataBuffer.asInputStream())) {
-                zipInputStream.getNextEntry();
-                ObjectMapper objectMapper = new ObjectMapper();
-                objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                U ret = objectMapper.readValue(zipInputStream, uClass);
-                return Flux.just(
-                    new ResponseEntity<U>(
-                        ret, clientHttpResponse.getHeaders(), clientHttpResponse.getStatusCode()));
-              } catch (IOException e) {
-                return Flux.error(e);
-              }
-            };
+    Function<ClientHttpResponse, Function<InputStreamCollector, Mono<ResponseEntity<U>>>>
+        parseDataBuffer =
+            clientHttpResponse ->
+                inputStreamCollector -> {
+                  try (BufferedInputStream bis =
+                          new BufferedInputStream(inputStreamCollector.getInputStream());
+                      ZipInputStream zipInputStream = new ZipInputStream(bis)) {
+                    ZipEntry entry = zipInputStream.getNextEntry();
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    objectMapper.configure(
+                        DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                    U ret = objectMapper.readValue(zipInputStream, uClass);
+                    return Mono.just(
+                        new ResponseEntity<U>(
+                            ret,
+                            clientHttpResponse.getHeaders(),
+                            clientHttpResponse.getStatusCode()));
+                  } catch (IOException e) {
+                    return Mono.error(e);
+                  } finally {
+                  }
+                };
 
+    // Notice here we collect all the DataBuffer Object returned by flux and collect them in a
+    // sequence input stream because sometimes the file downloaded is large and the flux
+    // emits DataBuffer objects in chunks. This all happens in memory though so it
+    // doesn't support very large files. From :
+    // https://stackoverflow.com/questions/46460599/how-to-correctly-read-fluxdatabuffer-and-convert-it-to-a-single-inputstream
     BodyExtractor<Mono<ResponseEntity<U>>, ClientHttpResponse> clientResponseBodyExtractor =
-        (clientHttpResponse, unused) -> {
+        (ClientHttpResponse clientHttpResponse, BodyExtractor.Context unused) -> {
           return clientHttpResponse
               .getBody()
-              .flatMap(parseDataBuffer.apply(clientHttpResponse))
-              .next();
+              .collect(
+                  InputStreamCollector::new,
+                  (InputStreamCollector t, DataBuffer dataBuffer) ->
+                      t.collectInputStream(dataBuffer.asInputStream(true)))
+              .flatMap(parseDataBuffer.apply(clientHttpResponse));
         };
 
     Function<ClientResponse, Mono<ResponseEntity<U>>> clientResponseHandler =
@@ -378,10 +410,12 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
   /**
    * The Qualtrix API for generating distribution links accepts a specific date time format which is
    * different from the rest of the API and it is interpreted as MST("America/Chihuahua")
-   * https://api.qualtrics.com/reference#distribution-create-1
-   * To get the correct date one option is to use {@link qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime}
-   * in the request body and zone the required expiry date to your timezone. The library will convert to
-   * MST for you. The other option is to use {@link qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody} and set the date
+   * https://api.qualtrics.com/reference#distribution-create-1 To get the correct date one option is
+   * to use {@link
+   * qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime}
+   * in the request body and zone the required expiry date to your timezone. The library will
+   * convert to MST for you. The other option is to use {@link
+   * qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody} and set the date
    * as a string yourself. Note the return expiry date will be given in UTC time.
    */
   public <T extends AbstractGenerateDistributionLinksBody>

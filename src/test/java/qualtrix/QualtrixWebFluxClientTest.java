@@ -21,7 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.zip.ZipInputStream;
 
 import static org.junit.Assert.assertThrows;
 
@@ -171,9 +172,23 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
     runCatchExceptions(
         client,
         c -> {
-          var ret = c.createResponseExportFile(surveyId, fileId).flatMap(clientResponseHandler);
-          Assert.assertEquals(ret.block().getStatusCode(), HttpStatus.OK);
+          var ret =
+              c.createResponseExportFile(surveyId, fileId).flatMap(clientResponseHandler).block();
+          Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
         });
+  }
+
+  public class InputStreamCollector {
+    private InputStream is;
+
+    public void collectInputStream(InputStream is) {
+      if (this.is == null) this.is = is;
+      this.is = new SequenceInputStream(this.is, is);
+    }
+
+    public InputStream getInputStream() {
+      return this.is;
+    }
   }
 
   @ParameterizedTest
