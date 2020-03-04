@@ -9,6 +9,18 @@ class EndPoints {
       }
     }
 
+    static class CreateSurvey {
+      static String path() {
+        return "API/v3/survey-definitions";
+      }
+    }
+
+    static class DeleteSurvey {
+      static String forSurvey(String surveyId) {
+        return String.format("API/v3/survey-definitions/%s", surveyId);
+      }
+    }
+
     static class ListSurveys {
       static String path() {
         return "API/v3/surveys";

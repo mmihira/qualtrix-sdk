@@ -15,9 +15,12 @@ import org.springframework.web.reactive.function.client.WebClient.RequestHeaders
 import qualtrix.exceptions.RateLimitAcquireFailed;
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.CreateContact.CreateContactResponse;
+import qualtrix.responses.V3.CreateSurvey.CreateSurveyBody;
+import qualtrix.responses.V3.CreateSurvey.CreateSurveyResponse;
 import qualtrix.responses.V3.DeleteContact.DeleteContactResponse;
 import qualtrix.responses.V3.DeleteDistribution.DeleteDistributionResponse;
 import qualtrix.responses.V3.DeleteMailingList.DeleteMailingListResponse;
+import qualtrix.responses.V3.DeleteSurvey.DeleteSurveyResponse;
 import qualtrix.responses.V3.GenerateDistributionLink.AbstractGenerateDistributionLinksBody;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinkResponse;
 import qualtrix.responses.V3.GetMailingList.GetMailingListResponse;
@@ -162,6 +165,22 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
     return this.waitRateThen(
         () ->
             this.getRequest(EndPoints.V3.WhoAmI.path()).retrieve().toEntity(WhoAmIResponse.class));
+  }
+
+  public Mono<ResponseEntity<CreateSurveyResponse>> createSurveys(CreateSurveyBody body) {
+    return this.waitRateThen(
+        () ->
+            this.postRequest(EndPoints.V3.CreateSurvey.path(), body)
+                .retrieve()
+                .toEntity(CreateSurveyResponse.class));
+  }
+
+  public Mono<ResponseEntity<DeleteSurveyResponse>> deleteSurveys(String surveyId) {
+    return this.waitRateThen(
+        () ->
+            this.deleteRequest(EndPoints.V3.DeleteSurvey.forSurvey(surveyId))
+                .retrieve()
+                .toEntity(DeleteSurveyResponse.class));
   }
 
   public Mono<ResponseEntity<SurveyListResponse>> listSurveys() {
@@ -411,10 +430,11 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
    * The Qualtrix API for generating distribution links accepts a specific date time format which is
    * different from the rest of the API and it is interpreted as MST("America/Chihuahua")
    * https://api.qualtrics.com/reference#distribution-create-1 To get the correct date one option is
-   * to use {@link  qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime}
+   * to use {@link
+   * qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime}
    * in the request body and zone the required expiry date to your timezone. The library will
-   * convert to MST for you. The other option is to use
-   * {@link qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody} and set the date
+   * convert to MST for you. The other option is to use {@link
+   * qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody} and set the date
    * as a string yourself. Note the return expiry date will be given in UTC time.
    */
   public <T extends AbstractGenerateDistributionLinksBody>

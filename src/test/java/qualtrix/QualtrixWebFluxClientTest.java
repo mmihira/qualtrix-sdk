@@ -13,11 +13,11 @@ import org.springframework.web.reactive.function.BodyExtractor;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
+import qualtrix.responses.V3.CreateSurvey.CreateSurveyBody;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime;
 import qualtrix.responses.V3.ResponseExport.CreateResponseExportBody;
 import qualtrix.responses.V3.ResponseExport.ResponseExportFormat;
-import qualtrix.responses.V3.Survey.SurveyResult;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -102,6 +102,25 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
           Assert.assertNotNull(result);
           Assert.assertEquals(result.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(result.getBody().getMeta().getHttpStatus(), "200 - OK");
+        });
+  }
+
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void createDeleteSurveys(QualtrixWebFluxClient client) {
+    runCatchExceptions(
+        client,
+        c -> {
+          var reqBody = new CreateSurveyBody("TestSurvey", "EN", "CORE");
+          var result = c.createSurveys(reqBody).block();
+          Assert.assertNotNull(result);
+          Assert.assertEquals(result.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(result.getBody().getMeta().getHttpStatus(), "200 - OK");
+
+          var delResult = c.deleteSurveys(result.getBody().getResult().getSurveyID()).block();
+          Assert.assertNotNull(delResult);
+          Assert.assertEquals(delResult.getStatusCode(), HttpStatus.OK);
+          Assert.assertEquals(delResult.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
   }
 
