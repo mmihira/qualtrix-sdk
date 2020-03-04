@@ -39,6 +39,7 @@ import qualtrix.responses.V3.Survey.AbstractSurveyResult;
 import qualtrix.responses.V3.Survey.DefaultSurveyResponse;
 import qualtrix.responses.V3.Survey.SurveyResponse;
 import qualtrix.responses.V3.SurveyList.SurveyListResponse;
+import qualtrix.responses.V3.UpdateSurveyFlow.UpdateSurveyFlowResponse;
 import qualtrix.responses.V3.WhoAmI.WhoAmIResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -144,6 +145,15 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
         .header("Content-Type", MediaType.APPLICATION_JSON.toString());
   }
 
+  public RequestHeadersSpec<?> putRequest(String path, Object body) {
+    return this.webClient
+        .put()
+        .uri(this.buildRequestUrl(path))
+        .bodyValue(body)
+        .header("X-API-TOKEN", this.getAccessToken())
+        .header("Content-Type", MediaType.APPLICATION_JSON.toString());
+  }
+
   private <V> Mono<V> waitRateThen(Supplier<Mono<V>> f) {
     return this.waitRate().then(f.get());
   }
@@ -173,6 +183,16 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
             this.postRequest(EndPoints.V3.CreateSurvey.path(), body)
                 .retrieve()
                 .toEntity(CreateSurveyResponse.class));
+  }
+
+  /** Body should follow format specified in https://api.qualtrics.com/reference#update-flow */
+  public <T> Mono<ResponseEntity<UpdateSurveyFlowResponse>> updateSurveyFlow(
+      String surveyId, T body) {
+    return this.waitRateThen(
+        () ->
+            this.putRequest(EndPoints.V3.UpdateSurveyFlow.forSurvey(surveyId), body)
+                .retrieve()
+                .toEntity(UpdateSurveyFlowResponse.class));
   }
 
   public Mono<ResponseEntity<DeleteSurveyResponse>> deleteSurveys(String surveyId) {

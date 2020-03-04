@@ -31,7 +31,6 @@ dependencies {
 
     compile group: 'org.springframework', name: 'spring-web', version: '5.2.3.RELEASE'
     compile group: 'io.projectreactor.addons', name: 'reactor-extra', version: '3.3.2.RELEASE'
-
 }
 
 test {

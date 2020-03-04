@@ -33,6 +33,12 @@ class EndPoints {
       }
     }
 
+    static class UpdateSurveyFlow {
+      static String forSurvey(String surveyId) {
+        return String.format("%s/%s", "API/v3/survey-definitions/%s/flow", surveyId);
+      }
+    }
+
     static class CreateResponseExport {
 
       static String forSurvey(String surveyId) {
