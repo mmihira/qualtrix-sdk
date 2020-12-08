@@ -72,34 +72,43 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
 
   @Builder
   public QualtrixWebFluxClient(
+      @NonNull String baseUrl,
       @NonNull String accessToken,
       WebClient webClient,
       RateLimiter rateLimiter,
       Duration internalRateLimiterCheckBackOff) {
 
-    super(accessToken);
+    super(accessToken, baseUrl);
     this.webClient = webClient;
     this.rateLimiter = rateLimiter;
     this.internalRateLimiterCheckBackOff = internalRateLimiterCheckBackOff;
   }
 
-  public QualtrixWebFluxClient(@NonNull String accessToken, WebClient webClient) {
+  public QualtrixWebFluxClient(
+      @NonNull String baseUrl, @NonNull String accessToken, WebClient webClient) {
 
-    super(accessToken);
+    super(accessToken, baseUrl);
     this.webClient = webClient;
     this.rateLimiter = null;
   }
 
   private QualtrixWebFluxClient(
-      @NonNull String accessToken, WebClient webClient, RateLimiter rateLimiter) {
-    super(accessToken);
+      @NonNull String baseUrl,
+      @NonNull String accessToken,
+      WebClient webClient,
+      RateLimiter rateLimiter) {
+    super(accessToken, baseUrl);
     this.rateLimiter = rateLimiter;
     this.webClient = webClient;
   }
 
   public static QualtrixWebFluxClient createRateLimited(
-      @NonNull String accessToken, WebClient webClient, float requestsPerSecond) {
-    return new QualtrixWebFluxClient(accessToken, webClient, RateLimiter.create(requestsPerSecond));
+      @NonNull String baseUrl,
+      @NonNull String accessToken,
+      WebClient webClient,
+      float requestsPerSecond) {
+    return new QualtrixWebFluxClient(
+        baseUrl, accessToken, webClient, RateLimiter.create(requestsPerSecond));
   }
 
   private Mono<Boolean> waitRate() {

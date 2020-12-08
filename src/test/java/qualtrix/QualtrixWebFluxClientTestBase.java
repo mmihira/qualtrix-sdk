@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 public class QualtrixWebFluxClientTestBase {
   protected static Logger log = null;
   protected static boolean LOG_REQUEST = true;
+  protected static String baseUrl = "https://au1.qualtrics.com";
 
   @BeforeAll
   public static void setLogger() {
@@ -86,13 +87,13 @@ public class QualtrixWebFluxClientTestBase {
   }
 
   protected static QualtrixWebFluxClient newClient(String key) throws IOException {
-    return new QualtrixWebFluxClient(key, newWebClient());
+    return new QualtrixWebFluxClient(baseUrl, key, newWebClient());
   }
 
   protected static QualtrixWebFluxClient newRateLimitedClient(float requestsPerSecond)
       throws IOException {
     return QualtrixWebFluxClient.createRateLimited(
-        TestProperties.getQualtrixTestKey(), newWebClient(), requestsPerSecond);
+        baseUrl, TestProperties.getQualtrixTestKey(), newWebClient(), requestsPerSecond);
   }
 
   protected static QualtrixWebFluxClient newClient() throws IOException {
@@ -122,8 +123,7 @@ public class QualtrixWebFluxClientTestBase {
     var mailRet = c.createMailingList(input).block();
 
     // First create a new contact
-    var body =
-            new CreateContactBody("test@gmal.com", null, null, "bob", "eng", "getRequest", true);
+    var body = new CreateContactBody("test@gmal.com", null, null, "bob", "eng", "getRequest", true);
     var ret = c.createContact(mailRet.getBody().getResult().getId(), body).block();
     Assert.assertEquals(ret.getStatusCode(), HttpStatus.OK);
     Assert.assertEquals(ret.getBody().getMeta().getHttpStatus(), "200 - OK");

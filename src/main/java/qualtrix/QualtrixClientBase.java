@@ -12,7 +12,7 @@ import java.util.Collections;
 @Data
 class QualtrixClientBase {
   @NonNull private final String accessToken;
-  private String qualtrixApiBaseURL = "https://au1.qualtrics.com";
+  @NonNull private final String qualtrixApiBaseURL;
 
   protected HttpHeaders genericGetHeaders() {
     HttpHeaders headers = new HttpHeaders();

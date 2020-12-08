@@ -11,4 +11,5 @@ public class ResponseExportFileResponseEntity extends AbstractResponseExportFile
   private ResponseExportFileValues values;
   private ResponseExportFileLabels labels;
   private ResponseExportFileDisplayedValues displayedValues;
+
 }
