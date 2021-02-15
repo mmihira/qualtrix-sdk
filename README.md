@@ -30,6 +30,25 @@ implemented. This library is designed to be used with spring-webclient. [maven l
     implementation 'io.github.mmihira:qualtrix-sdk:0.1.0'
 ```
 
+### Publish
+
+- In `gradle.properties` have the following properties set
+```
+signing.keyId=<>
+signing.password=<>
+signing.secretKeyRingFile=<>
+
+sonatypeUsername=mmihira
+sonatypePassword=<>
+```
+- In `build.gradle` set the updated version, tag and push to upstream.
+- Run `./gradlew publish` in project dir
+- Go to `https://oss.sonatype.org/#stagingRepositories`. Login if necessary
+- Select the repository that was uploaded and `close` it.
+- Then `Release` it once the closing process has finished.
+
+
+
 ## License
 
 This SDK is distributed under the Apache License, Version 2.0, see LICENSE.txt and NOTICE.txt for more information.
