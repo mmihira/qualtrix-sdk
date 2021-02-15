@@ -13,6 +13,7 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.RequestHeadersSpec;
 import qualtrix.exceptions.RateLimitAcquireFailed;
+import qualtrix.responses.V3.BaseResponse;
 import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.CreateContact.CreateContactResponse;
 import qualtrix.responses.V3.CreateSurvey.CreateSurveyBody;
@@ -226,6 +227,23 @@ public class QualtrixWebFluxClient extends QualtrixClientBase {
             this.getRequest(EndPoints.V3.GetSurvey.forSurvey(surveyId))
                 .retrieve()
                 .toEntity(DefaultSurveyResponse.class));
+  }
+
+  public Mono<ResponseEntity<Object>> surveyResponse(String surveyId, String responseId) {
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.GetSurveyResponse.path(responseId, surveyId))
+                .retrieve()
+                .toEntity(Object.class));
+  }
+
+  public <T extends BaseResponse> Mono<ResponseEntity<T>> surveyResponse(
+      String surveyId, String responseId, Class<T> responseClass) {
+    return this.waitRateThen(
+        () ->
+            this.getRequest(EndPoints.V3.GetSurveyResponse.path(responseId, surveyId))
+                .retrieve()
+                .toEntity(responseClass));
   }
 
   public <T extends AbstractSurveyResult, U extends SurveyResponse<T>>

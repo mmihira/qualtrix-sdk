@@ -115,6 +115,12 @@ class EndPoints {
       }
     }
 
+    static class GetSurveyResponse {
+      static String path(String responseId, String surveyId) {
+        return String.format("API/v3/surveys/%s/responses/%s", surveyId, responseId);
+      }
+    }
+
     static class RetrieveGeneratedLinks {
       static String path(String distributionId) {
         return String.format(

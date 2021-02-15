@@ -16,6 +16,7 @@ import qualtrix.responses.V3.CreateContact.CreateContactBody;
 import qualtrix.responses.V3.CreateSurvey.CreateSurveyBody;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBody;
 import qualtrix.responses.V3.GenerateDistributionLink.GenerateDistributionLinksBodyWithZonedDateTime;
+import qualtrix.responses.V3.GetResponseTest;
 import qualtrix.responses.V3.ResponseExport.CreateResponseExportBody;
 import qualtrix.responses.V3.ResponseExport.ResponseExportFormat;
 import reactor.core.publisher.Flux;
@@ -102,6 +103,23 @@ public class QualtrixWebFluxClientTest extends QualtrixWebFluxClientTestBase {
           Assert.assertNotNull(result);
           Assert.assertEquals(result.getStatusCode(), HttpStatus.OK);
           Assert.assertEquals(result.getBody().getMeta().getHttpStatus(), "200 - OK");
+        });
+  }
+
+  @ParameterizedTest
+  @MethodSource("clientProvider")
+  public void getSurveyResponse(QualtrixWebFluxClient client) {
+    runCatchExceptions(
+        client,
+        c -> {
+          var result =
+              c.surveyResponse("SV_1Ht82lVjOxsG0eN", "R_3snLAlDOqAdHQbj", GetResponseTest.class)
+                  .block();
+          Assert.assertNotNull(result);
+          Assert.assertEquals(result.getStatusCode(), HttpStatus.OK);
+          //          var body = result.getBody();
+          //          System.out.println(body.getProperties());
+          //          Assert.assertEquals(result.getBody().getMeta().getHttpStatus(), "200 - OK");
         });
   }
 
