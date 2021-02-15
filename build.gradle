@@ -149,7 +149,7 @@ publishing {
             customizePom(pom)
             groupId 'io.github.mmihira'
             artifactId 'qualtrix-sdk'
-            version '0.4.0'
+            version '0.4.1'
 
             from components.java
 
